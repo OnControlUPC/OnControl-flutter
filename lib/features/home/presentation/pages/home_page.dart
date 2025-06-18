@@ -1,55 +1,54 @@
 // lib/features/home/presentation/pages/home_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '/features/doctors/presentation/pages/doctors_page.dart';
+import '/features/messages/presentation/pages/messages_page.dart';
+import '/features/calendar/presentation/pages/calendar_page.dart';
+import '/features/notifications/presentation/pages/notifications_page.dart';
 
-import '/features/auth/presentation/bloc/auth_bloc.dart';
-import '/features/auth/presentation/bloc/auth_event.dart';
-import '/features/auth/presentation/bloc/auth_state.dart';
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
-  Future<void> _logout(BuildContext context) async {
-    // 1) Dispara el evento de logout
-    context.read<AuthBloc>().add(AuthLogoutRequested());
-    // 2) Limpia storage y prefs
-    final secure = const FlutterSecureStorage();
-    await secure.delete(key: 'token');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('keepSignedIn');
-    // 3) Navega a login
-    Navigator.pushReplacementNamed(context, '/');
-  }
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = const [
+    DoctorsPage(),        // ← primera pestaña: doctores
+    MessagesPage(),
+    CalendarPage(),
+    NotificationsPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (ctx, state) {
-        if (state is AuthUnauthenticated) {
-          Navigator.pushReplacementNamed(ctx, '/');
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Inicio'),
-          automaticallyImplyLeading: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Cerrar sesión',
-              onPressed: () => _logout(context),
-            ),
-          ],
-        ),
-        body: const Center(
-          child: Text(
-            '¡Bienvenido a tu HomePage!',
-            style: TextStyle(fontSize: 18),
+    return Scaffold(
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
+        onTap: (idx) => setState(() => _currentIndex = idx),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.medical_services),
+            label: 'Doctores',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.mail_outline),
+            label: 'Mensajes',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Calendario',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_none),
+            label: 'Notificaciones',
+          ),
+        ],
       ),
     );
   }
