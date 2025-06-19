@@ -1,31 +1,35 @@
-// lib/features/auth/data/models/user_model.dart
-
 import '../../domain/entities/user.dart';
 
+/// Modelo de usuario que extiende la entidad `User`
+/// Añade `token` y `role`
 class UserModel extends User {
   final String token;
   final String role;
 
-  UserModel({
-    required String id,
-    required String name,
+  const UserModel({
+    required int id,
+    required String username,
     required this.token,
     required this.role,
-  }) : super(id: id, name: name);
+  }) : super(id: id, username: username);
 
+  /// Deserializa el JSON de respuesta, manejando token nulo en sign-up
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'].toString(),           // lee id directo
-      name: json['username'],               // lee username directo
-      token: json['token'],                 // lee token
-      role: json['role'],                   // lee role
+      id: json['id'] as int,
+      username: json['username'] as String,
+      token: (json['token'] as String?) ?? '',
+      role: json['role'] as String,
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'username': name,
-        'token': token,
-        'role': role,
-      };
+  /// Serialización opcional
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'username': username,
+      'token': token,
+      'role': role,
+    };
+  }
 }

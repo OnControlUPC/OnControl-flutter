@@ -1,38 +1,28 @@
-// lib/features/auth/presentation/pages/splash_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({Key? key}) : super(key: key);
+
   @override
   State<SplashPage> createState() => _SplashPageState();
 }
 
 class _SplashPageState extends State<SplashPage> {
-  final _secureStorage = const FlutterSecureStorage();
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    _checkSession();
+    _checkAuth();
   }
 
-  Future<void> _checkSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keep  = prefs.getBool('keepSignedIn') ?? false;
-    final token = await _secureStorage.read(key: 'token');
+  Future<void> _checkAuth() async {
+    final token = await _storage.read(key: 'token');
+    print('▶️ [SplashPage] token=$token');
 
-    debugPrint('🔍 keepSignedIn=$keep, token=$token');
-
-    if (keep && token != null && token.isNotEmpty) {
-      // → Va a Home y elimina TODO el historial de navegación
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-    } else {
-      // → Va a Login y elimina TODO el historial de navegación
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-    }
+    // Siempre navegar primero a la pantalla de login
+    Navigator.of(context).pushReplacementNamed('/');
   }
 
   @override

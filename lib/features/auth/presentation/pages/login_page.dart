@@ -1,129 +1,106 @@
-// lib/features/auth/presentation/pages/login_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../bloc/auth_bloc.dart';
-import '../bloc/auth_event.dart';
-import '../bloc/auth_state.dart';
-import '../../data/models/user_model.dart';
+import '.././bloc/auth_bloc.dart';
+import '.././bloc/auth_event.dart';
+import '.././bloc/auth_state.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _userCtrl   = TextEditingController();
-  final _passCtrl   = TextEditingController();
-  final _secureStorage = const FlutterSecureStorage();
-
-  bool _obscurePassword = true;
-  bool _keepSignedIn    = false;
-  bool _shownSnack      = false;
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _showPassword = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_shownSnack) {
-      final msg = ModalRoute.of(context)?.settings.arguments;
-      if (msg is String) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(msg)));
-        });
-        _shownSnack = true;
-      }
-    }
-  }
-
-  Future<void> _onLoginSuccess(UserModel user) async {
-    // Persistir token y preferencia al vuelo
-    await _secureStorage.write(key: 'token', value: user.token);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('keepSignedIn', _keepSignedIn);
-    debugPrint('✅ Saved -> keepSignedIn=$_keepSignedIn; token=${user.token}');
-    // Navegar a Home y limpiar stack
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Iniciar sesión'),
-        automaticallyImplyLeading: false,  // ← quita la flecha
-      ),
-      body: BlocConsumer<AuthBloc, AuthState>(
-        listener: (ctx, state) {
+      appBar: AppBar(title: const Text('Iniciar Sesión')),
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) async {
           if (state is AuthAuthenticated) {
-            _onLoginSuccess(state.user as UserModel);
+            final token = await const FlutterSecureStorage().read(key: 'token');
+            print('🔔 [UI:Login] Authenticated with token=$token');
+            Navigator.of(context).pushReplacementNamed('/home');
           }
           if (state is AuthError) {
-            ScaffoldMessenger.of(ctx)
-                .showSnackBar(SnackBar(content: Text(state.message)));
+            print('❌ [UI:Login] AuthError: ${state.message}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
           }
         },
-        builder: (ctx, state) {
-          if (state is AuthLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Padding(
-            padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextField(
-                  controller: _userCtrl,
-                  decoration:
-                      const InputDecoration(labelText: 'Usuario o correo'),
+                TextFormField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Correo'),
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (v) => v != null && v.contains('@') ? null : 'Email inválido',
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _passCtrl,
-                  obscureText: _obscurePassword,
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility),
-                      onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword),
+                      icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _showPassword = !_showPassword),
                     ),
                   ),
+                  obscureText: !_showPassword,
+                  validator: (v) => v != null && v.length >= 6 ? null : 'Min. 6 caracteres',
                 ),
-                const SizedBox(height: 12),
-                CheckboxListTile(
-                  title: const Text('Mantener sesión iniciada'),
-                  value: _keepSignedIn,
-                  onChanged: (v) => setState(() => _keepSignedIn = v!),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(
-                          AuthLoginRequested(
-                            _userCtrl.text,
-                            _passCtrl.text,
-                          ),
-                        );
+                const SizedBox(height: 32),
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, state) {
+                    if (state is AuthLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              context.read<AuthBloc>().add(
+                                    AuthLoginRequested(
+                                      _emailController.text.trim(),
+                                      _passwordController.text.trim(),
+                                    ),
+                                  );
+                            }
+                          },
+                          child: const Text('Ingresar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pushNamed('/signup'),
+                          child: const Text('Crear cuenta'),
+                        ),
+                      ],
+                    );
                   },
-                  child: const Text('Entrar'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pushNamed(context, '/signup'),
-                  child: const Text('¿No tienes cuenta? Regístrate'),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

@@ -1,36 +1,64 @@
-// lib/features/auth/presentation/bloc/auth_bloc.dart
-
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/repositories/auth_repository.dart';
+import '../.././data/repositories/auth_repository_impl.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final AuthRepository repo;
-  AuthBloc(this.repo) : super(AuthInitial()) {
-    on<AuthLoginRequested>((e, emit) async {
-      emit(AuthLoading());
-      try {
-        final u = await repo.login(e.username, e.password);
-        emit(AuthAuthenticated(u));
-      } catch (ex) {
-        emit(AuthError(ex.toString()));
-      }
-    });
+  final AuthRepositoryImpl _repository;
 
-    on<AuthSignUpRequested>((e, emit) async {
-      emit(AuthLoading());
-      try {
-        final u = await repo.signUp(e.username, e.email, e.password, e.role);
-        emit(AuthSignUpSuccess(u));
-      } catch (ex) {
-        emit(AuthError(ex.toString()));
-      }
-    });
+  AuthBloc(this._repository) : super(AuthInitial()) {
+    on<AuthSignUpRequested>(_onSignUpRequested);
+    on<AuthLoginRequested>(_onLoginRequested);
+    on<AuthLogoutRequested>(_onLogoutRequested);
+  }
 
-    on<AuthLogoutRequested>((_, emit) async {
-      await repo.logout();
-      emit(AuthUnauthenticated());
-    });
+  Future<void> _onSignUpRequested(
+    AuthSignUpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    print('▶️ [AuthBloc] SignUpRequested: ${event.email}');
+    emit(AuthLoading());
+    try {
+      final user = await _repository.signUp(
+        event.name,
+        event.email,
+        event.password,
+        event.role,
+      );
+      print('✅ [AuthBloc] AuthSignUpSuccess: id=${user.id}');
+      emit(AuthSignUpSuccess(user));
+    } catch (e) {
+      print('❌ [AuthBloc] SignUp error: $e');
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoginRequested(
+    AuthLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    print('▶️ [AuthBloc] LoginRequested: ${event.username}');
+    emit(AuthLoading());
+    try {
+      final user = await _repository.login(
+        event.username,
+        event.password,
+      );
+      print('✅ [AuthBloc] AuthAuthenticated: token=${user.token}');
+      emit(AuthAuthenticated(user));
+    } catch (e) {
+      print('❌ [AuthBloc] Login error: $e');
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onLogoutRequested(
+    AuthLogoutRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    print('▶️ [AuthBloc] LogoutRequested');
+    await _repository.logout();
+    print('✅ [AuthBloc] AuthUnauthenticated');
+    emit(AuthUnauthenticated());
   }
 }

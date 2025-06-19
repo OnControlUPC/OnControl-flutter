@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,37 +11,30 @@ import 'features/auth/presentation/bloc/auth_state.dart';
 import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/signup_page.dart';
+import 'features/patients/presentation/pages/profile_creation_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa secure storage y shared preferences
   final secureStorage = FlutterSecureStorage();
-  final sharedPreferences = await SharedPreferences.getInstance();
-
-  // Cliente HTTP que eludirá CORS en web
+  final sharedPrefs = await SharedPreferences.getInstance();
   final client = createHttpClient();
 
-  // DataSource: usa el client y el storage/prefs
-  final authRemoteDataSource = AuthRemoteDataSourceImpl(
+  final authDS = AuthRemoteDataSourceImpl(
     client: client,
     secureStorage: secureStorage,
-    sharedPreferences: sharedPreferences,
+    sharedPreferences: sharedPrefs,
   );
-
-  // Repository: sólo inyecta "remote" y "storage"
-  final authRepository = AuthRepositoryImpl(
-    remote: authRemoteDataSource,
-    storage: secureStorage,
+  final authRepo = AuthRepositoryImpl(
+    remoteDataSource: authDS,
+    secureStorage: secureStorage,
   );
 
   runApp(
     MultiBlocProvider(
       providers: [
-        BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(authRepository),
-        ),
+        BlocProvider(create: (_) => AuthBloc(authRepo)),
       ],
       child: const MyApp(),
     ),
@@ -51,29 +42,48 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       initialRoute: '/splash',
       routes: {
         '/splash': (_) => const SplashPage(),
         '/': (_) => BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
+                print('▶️ [MyApp] AuthState: $state');
                 if (state is AuthLoading) {
                   return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
                   );
                 } else if (state is AuthAuthenticated) {
                   return const HomePage();
-                } else {
-                  return const LoginPage();
                 }
+                return const LoginPage();
               },
             ),
         '/signup': (_) => const SignUpPage(),
-        '/home': (_) => const HomePage(),
+        '/profile-creation': (ctx) {
+          final args =
+              ModalRoute.of(ctx)!.settings.arguments as Map<String, dynamic>;
+          print('▶️ [Router] profile-creation args=$args');
+          return ProfileCreationPage(
+            userId: args['userId'] as int,
+            email: args['email'] as String,
+            token: args['token'] as String?,
+          );
+        },
+        '/home': (_) => BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return const HomePage();
+            } else {
+              return const LoginPage();
+            }
+          },
+        ),
       },
     );
   }

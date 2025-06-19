@@ -1,12 +1,15 @@
-// lib/features/auth/domain/entities/user.dart
 import 'package:equatable/equatable.dart';
 
-class User extends Equatable {
-  final String id;
-  final String name;
+/// Entidad de usuario para autenticación
+abstract class User extends Equatable {
+  final int id;
+  final String username;
 
-  const User({ required this.id, required this.name });
+  const User({
+    required this.id,
+    required this.username,
+  });
 
   @override
-  List<Object?> get props => [id, name];
+  List<Object?> get props => [id, username];
 }

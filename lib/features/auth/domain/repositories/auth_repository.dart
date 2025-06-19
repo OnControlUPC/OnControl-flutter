@@ -1,9 +1,8 @@
-// lib/features/auth/domain/repositories/auth_repository.dart
+import '/features/auth/data/models/user_model.dart';
 
-import '../entities/user.dart';
-
+/// Interfaz de repositorio de autenticación
 abstract class AuthRepository {
-  Future<User> login(String username, String password);
-  Future<User> signUp(String username, String email, String password, String role);
+  Future<UserModel> login(String identifier, String password);
+  Future<UserModel> signUp(String name, String email, String password, String role);
   Future<void> logout();
 }

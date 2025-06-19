@@ -1,39 +1,39 @@
-// lib/features/auth/data/repositories/auth_repository_impl.dart
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_remote_datasource.dart';
+import '../models/user_model.dart';
 
+/// Implementación de `AuthRepository` usando `AuthRemoteDataSource`
 class AuthRepositoryImpl implements AuthRepository {
-  final AuthRemoteDataSource remote;
-  final FlutterSecureStorage storage;
+  final AuthRemoteDataSource remoteDataSource;
+  final FlutterSecureStorage secureStorage;
 
   AuthRepositoryImpl({
-    required this.remote,
-    required this.storage,
+    required this.remoteDataSource,
+    required this.secureStorage,
   });
 
   @override
-  Future<User> login(String identifier, String password) async {
-    // La obtención del UserModel se hace en el remote
-    return await remote.login(identifier, password);
+  Future<UserModel> login(String identifier, String password) async {
+    print('▶️ [AuthRepo.login] identifier=$identifier');
+    final user = await remoteDataSource.login(identifier, password);
+    await secureStorage.write(key: 'token', value: user.token);
+    print('✅ [AuthRepo.login] token guardado: ${user.token}');
+    return user;
   }
 
   @override
-  Future<User> signUp(
-    String username,
-    String email,
-    String password,
-    String role,
-  ) async {
-    return await remote.signUp(username, email, password, role);
+  Future<UserModel> signUp(String name, String email, String password, String role) async {
+    print('▶️ [AuthRepo.signUp] email=$email');
+    final user = await remoteDataSource.signUp(name, email, password, role);
+    print('✅ [AuthRepo.signUp] id=${user.id}');
+    return user;
   }
 
   @override
   Future<void> logout() async {
-    // Al cerrar sesión, borramos tanto el token como la preferencia de mantener sesión
-    await storage.delete(key: 'token');
-    await storage.delete(key: 'keepSignedIn');
+    print('▶️ [AuthRepo.logout]');
+    await secureStorage.delete(key: 'token');
+    print('✅ [AuthRepo.logout] token eliminado');
   }
 }

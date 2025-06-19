@@ -8,4 +8,5 @@ class Config {
   /// Rutas relativas a BASE_URL
   static const String LOGIN_URL = '/authentication/sign-in';
   static const String SIGNUP_URL = '/authentication/sign-up';
+  static const String CREATE_PROFILE_URL = '/patients';
 }
