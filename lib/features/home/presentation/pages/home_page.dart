@@ -3,7 +3,7 @@ import '/features/doctors/presentation/pages/doctors_page.dart';
 import '/features/messages/presentation/pages/messages_page.dart';
 import '/features/calendar/presentation/pages/calendar_page.dart';
 import '/features/notifications/presentation/pages/notifications_page.dart';
-
+import '/features/home/presentation/pages/profile_page.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -18,6 +18,7 @@ class _HomePageState extends State<HomePage> {
     MessagesPage(),
     CalendarPage(),
     NotificationsPage(),
+    ProfilePage(), // pestaña de perfil
   ];
 
   @override
@@ -46,6 +47,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
             label: 'Notificaciones',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Perfil',
           ),
         ],
         type: BottomNavigationBarType.fixed,
