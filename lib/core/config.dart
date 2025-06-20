@@ -3,7 +3,7 @@
 class Config {
   /// URL base de tu API (sin slash final)
   static const String BASE_URL =
-      'https://3ce0-38-187-27-247.ngrok-free.app/api/v1';
+      'https://oncontrolbackend-gtbdhpc9fgd2epdx.westus3-01.azurewebsites.net/api/v1';
 
   /// Rutas relativas a BASE_URL
   static const String LOGIN_URL = '/authentication/sign-in';

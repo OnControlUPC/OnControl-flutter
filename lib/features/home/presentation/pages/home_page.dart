@@ -1,14 +1,17 @@
+/// lib/features/home/presentation/pages/home_page.dart
+
 import 'package:flutter/material.dart';
 import '/features/doctors/presentation/pages/doctors_page.dart';
 import '/features/messages/presentation/pages/messages_page.dart';
 import '/features/calendar/presentation/pages/calendar_page.dart';
 import '/features/notifications/presentation/pages/notifications_page.dart';
 import '/features/home/presentation/pages/profile_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
   @override
-  _HomePageState createState() => _HomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
@@ -18,19 +21,41 @@ class _HomePageState extends State<HomePage> {
     MessagesPage(),
     CalendarPage(),
     NotificationsPage(),
-    ProfilePage(), // pestaña de perfil
+    ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      body: _pages[_currentIndex],
+      extendBody: true,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withOpacity(0.1),
+              theme.colorScheme.background,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages.map((page) => SafeArea(child: page)).toList(),
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (idx) {
-          print('🔀 [HomePage] Cambiando a pestaña índice=$idx');
-          setState(() => _currentIndex = idx);
-        },
+        onTap: (idx) => setState(() => _currentIndex = idx),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 4,
+        selectedItemColor: theme.colorScheme.primary,
+        unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.6),
+        showUnselectedLabels: true,
+        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
@@ -53,7 +78,6 @@ class _HomePageState extends State<HomePage> {
             label: 'Perfil',
           ),
         ],
-        type: BottomNavigationBarType.fixed,
       ),
     );
   }
