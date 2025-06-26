@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-// lib/features/home/presentation/pages/home_page.dart
-=======
-/// lib/features/home/presentation/pages/home_page.dart
->>>>>>> d6cf2e71eecc2ae6a62194416a62ed02e66b8ac0
+
 
 import 'package:flutter/material.dart';
 import '/features/treatments/presentation/pages/treatments_list_page.dart';
