@@ -1,14 +1,16 @@
+/// lib/features/patients/presentation/pages/login_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '.././bloc/auth_bloc.dart';
-import '.././bloc/auth_event.dart';
-import '.././bloc/auth_state.dart';
+import '../bloc/auth_bloc.dart';
+import '../bloc/auth_event.dart';
+import '../bloc/auth_state.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -26,8 +28,16 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: Theme.of(context).primaryColor),
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar Sesión')),
+      appBar: AppBar(
+        title: const Text('Iniciar Sesión'),
+        centerTitle: true,
+      ),
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state is AuthAuthenticated) {
@@ -43,14 +53,18 @@ class _LoginPageState extends State<LoginPage> {
           }
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Correo'),
+                  decoration: InputDecoration(
+                    labelText: 'Correo',
+                    border: inputBorder,
+                  ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) => v != null && v.contains('@') ? null : 'Email inválido',
                 ),
@@ -59,13 +73,16 @@ class _LoginPageState extends State<LoginPage> {
                   controller: _passwordController,
                   decoration: InputDecoration(
                     labelText: 'Contraseña',
+                    border: inputBorder,
                     suffixIcon: IconButton(
-                      icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                      icon: Icon(
+                        _showPassword ? Icons.visibility_off : Icons.visibility,
+                      ),
                       onPressed: () => setState(() => _showPassword = !_showPassword),
                     ),
                   ),
                   obscureText: !_showPassword,
-                  validator: (v) => v != null && v.length >= 6 ? null : 'Min. 6 caracteres',
+                  validator: (v) => v != null && v.length >= 6 ? null : 'Mínimo 6 caracteres',
                 ),
                 const SizedBox(height: 32),
                 BlocBuilder<AuthBloc, AuthState>(
@@ -76,18 +93,27 @@ class _LoginPageState extends State<LoginPage> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                              context.read<AuthBloc>().add(
-                                    AuthLoginRequested(
-                                      _emailController.text.trim(),
-                                      _passwordController.text.trim(),
-                                    ),
-                                  );
-                            }
-                          },
-                          child: const Text('Ingresar'),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (_formKey.currentState!.validate()) {
+                                context.read<AuthBloc>().add(
+                                      AuthLoginRequested(
+                                        _emailController.text.trim(),
+                                        _passwordController.text.trim(),
+                                      ),
+                                    );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(120, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Ingresar'),
+                          ),
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(context).pushNamed('/signup'),
