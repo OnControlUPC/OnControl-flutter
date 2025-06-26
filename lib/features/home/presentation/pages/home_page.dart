@@ -1,9 +1,13 @@
+// lib/features/home/presentation/pages/home_page.dart
+
 import 'package:flutter/material.dart';
-import '/features/doctors/presentation/pages/doctors_page.dart';
+import '/features/treatments/presentation/pages/treatments_list_page.dart';
+import '/features/doctor_patient_links/presentation/pages/pending_requests_page.dart';
 import '/features/messages/presentation/pages/messages_page.dart';
 import '/features/calendar/presentation/pages/calendar_page.dart';
 import '/features/notifications/presentation/pages/notifications_page.dart';
 import '/features/home/presentation/pages/profile_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -14,11 +18,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   static const List<Widget> _pages = <Widget>[
-    DoctorsPage(),
+    TreatmentsListPage(),  // pestaña de tratamientos
+    PendingRequestsPage(),  // solicitudes de doctor-paciente
     MessagesPage(),
     CalendarPage(),
     NotificationsPage(),
-    ProfilePage(), // pestaña de perfil
+    ProfilePage(),
   ];
 
   @override
@@ -33,8 +38,12 @@ class _HomePageState extends State<HomePage> {
         },
         items: const [
           BottomNavigationBarItem(
+            icon: Icon(Icons.healing),
+            label: 'Tratamientos',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
-            label: 'Doctores',
+            label: 'Solicitudes',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.message),
