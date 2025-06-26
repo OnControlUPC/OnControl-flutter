@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../../core/http_client.dart';
 import '../../data/datasources/doctor_remote_datasource.dart';
 import '../../data/repositories/doctor_repository_impl.dart';
 import '../../domain/entities/doctor.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class DoctorsListPage extends StatefulWidget {
   const DoctorsListPage({Key? key}) : super(key: key);

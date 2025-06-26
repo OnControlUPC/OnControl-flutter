@@ -1,7 +1,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '/core/http_client.dart';
 import '../../data/datasources/doctor_patient_link_remote_datasource.dart';
 import '../../data/repositories/doctor_patient_link_repository_impl.dart';
 import '../../domain/entities/doctor_patient_link.dart';

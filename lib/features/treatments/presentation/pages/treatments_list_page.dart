@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // si lo necesitas para otra cosa
 import '../../../../core/http_client.dart';
 import '../../../doctor_patient_links/data/datasources/doctor_patient_link_remote_datasource.dart';
 import '../../data/datasources/treatment_remote_datasource.dart';

@@ -126,6 +126,10 @@ http_parser
 3.4
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/lib/
+intl
+3.3
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2/
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2/lib/
 io
 3.4
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/io-1.0.5/
@@ -266,6 +270,10 @@ shelf_web_socket
 3.5
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/shelf_web_socket-3.0.0/
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/shelf_web_socket-3.0.0/lib/
+simple_gesture_detector
+2.12
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/simple_gesture_detector-0.2.1/
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/simple_gesture_detector-0.2.1/lib/
 source_map_stack_trace
 3.3
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/source_map_stack_trace-2.1.2/
@@ -290,6 +298,10 @@ string_scanner
 3.1
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/string_scanner-1.4.1/
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/string_scanner-1.4.1/lib/
+table_calendar
+3.0
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/table_calendar-3.2.0/
+file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/table_calendar-3.2.0/lib/
 term_glyph
 3.1
 file:///C:/Users/ONGAR/AppData/Local/Pub/Cache/hosted/pub.dev/term_glyph-1.2.2/
