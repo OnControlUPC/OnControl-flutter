@@ -36,9 +36,7 @@ class _CalendarPageState extends State<CalendarPage> {
       remote: TreatmentRemoteDataSourceImpl(),
       secureStorage: _storage,
     );
-    _linkDs = DoctorPatientLinkRemoteDataSourceImpl(
-      client: createHttpClient(),
-    );
+    _linkDs = DoctorPatientLinkRemoteDataSourceImpl(client: createHttpClient());
     _loadTreatments();
   }
 
@@ -49,7 +47,6 @@ class _CalendarPageState extends State<CalendarPage> {
     });
 
     final token = await _storage.read(key: 'token') ?? '';
-    print('▶️ [CalendarPage] token=$token');
     if (token.isEmpty) {
       setState(() {
         _error = 'Sesión no iniciada';
@@ -59,17 +56,11 @@ class _CalendarPageState extends State<CalendarPage> {
     }
 
     try {
-      // Obtener UUID del paciente desde doctor_patient_links
       final patientUuid = await _linkDs.fetchPatientUuid(token);
-      print('🔍 [CalendarPage] patientUuid=$patientUuid');
-
-      // Obtener tratamientos usando la UUID obtenida
       final list = await _repo.getTreatments(patientUuid, token);
-      print('🔔 [CalendarPage] tratamientos encontrados: ${list.length}');
       _treatments = list;
       _buildEventMap();
     } catch (e) {
-      print('❌ [CalendarPage] error: $e');
       _error = 'Error cargando tratamientos';
     }
 
@@ -99,62 +90,129 @@ class _CalendarPageState extends State<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!));
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_error != null) return Scaffold(body: Center(child: Text(_error!)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendario')),
-      body: Column(
-        children: [
-          TableCalendar<Treatment>(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            eventLoader: _getEventsForDay,
-            onDaySelected: (selected, focused) {
-              setState(() {
-                _selectedDay = selected;
-                _focusedDay = focused;
-              });
-            },
-            calendarStyle: const CalendarStyle(
-              markerDecoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
+      backgroundColor: Colors.grey.shade50,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header degradado
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 44, 194, 49),
+                    Color.fromARGB(255, 105, 96, 197),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
               ),
-              todayDecoration: BoxDecoration(
-                color: Colors.orange,
-                shape: BoxShape.circle,
-              ),
-            ),
-            headerStyle: const HeaderStyle(
-              titleCentered: true,
-              formatButtonVisible: false,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: _selectedDay == null
-                ? const Center(child: Text('Seleccione un día'))
-                : ListView(
-                    children: _getEventsForDay(_selectedDay!).map((t) {
-                      return ListTile(
-                        title: Text(t.title),
-                        subtitle: Text(
-                          'Del ${_formatDate(t.startDate)} al ${_formatDate(t.endDate)}',
-                        ),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TreatmentDetailPage(treatment: t),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+              child: const Center(
+                child: Text(
+                  'Calendario de Tratamientos',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
+                ),
+              ),
+            ),
+
+            // Calendario
+            TableCalendar<Treatment>(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2030, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              eventLoader: _getEventsForDay,
+              onDaySelected: (selected, focused) {
+                setState(() {
+                  _selectedDay = selected;
+                  _focusedDay = focused;
+                });
+              },
+              calendarStyle: const CalendarStyle(
+                markerDecoration: BoxDecoration(
+                  color: Colors.deepPurple,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Colors.orange,
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              headerStyle: const HeaderStyle(
+                titleCentered: true,
+                formatButtonVisible: false,
+                titleTextStyle: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Lista de tratamientos del día
+            Expanded(
+  child: _selectedDay == null
+      ? const Center(child: Text('Seleccione un día para ver tratamientos'))
+      : Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: ListView.builder(
+            itemCount: _getEventsForDay(_selectedDay!).length,
+            itemBuilder: (context, i) {
+              final t = _getEventsForDay(_selectedDay!)[i];
+              return Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  title: Text(
+                    t.title,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text('Desde ${_formatDate(t.startDate)}'),
+                  trailing: Text(
+                    t.status,
+                    style: const TextStyle(
+                      color: Colors.teal,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TreatmentDetailPage(treatment: t),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ],
+        ),
+),
+
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
