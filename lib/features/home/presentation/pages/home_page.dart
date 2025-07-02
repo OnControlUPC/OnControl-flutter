@@ -2,10 +2,9 @@
 
 import 'package:flutter/material.dart';
 import '/features/treatments/presentation/pages/treatments_list_page.dart';
-import '/features/doctor_patient_links/presentation/pages/pending_requests_page.dart';
-import '/features/messages/presentation/pages/messages_page.dart';
+import '/features/appointment/presentation/pages/appointments_list_page.dart';
+import '../../../doctor_patient_links/presentation/pages/active_doctors_page.dart';
 import '/features/calendar/presentation/pages/calendar_page.dart';
-import '/features/notifications/presentation/pages/notifications_page.dart';
 import '/features/home/presentation/pages/profile_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,10 +18,9 @@ class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   static const List<Widget> _pages = <Widget>[
     TreatmentsListPage(),  // pestaña de tratamientos
-    PendingRequestsPage(),  // solicitudes de doctor-paciente
-    MessagesPage(),
+    AppointmentsListPage(),  // solicitudes de doctor-paciente
+    ActiveDoctorsPage(),
     CalendarPage(),
-    NotificationsPage(),
     ProfilePage(),
   ];
 
@@ -74,10 +72,6 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: 'Calendario',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            label: 'Notificaciones',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

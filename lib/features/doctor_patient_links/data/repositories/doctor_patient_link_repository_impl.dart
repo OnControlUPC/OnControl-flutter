@@ -1,11 +1,9 @@
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/entities/doctor_patient_link.dart';
 import '../../domain/repositories/doctor_patient_link_repository.dart';
 import '../datasources/doctor_patient_link_remote_datasource.dart';
 
-class DoctorPatientLinkRepositoryImpl
-    implements DoctorPatientLinkRepository {
+class DoctorPatientLinkRepositoryImpl implements DoctorPatientLinkRepository {
   final DoctorPatientLinkRemoteDataSource remote;
   final FlutterSecureStorage secureStorage;
 
@@ -16,16 +14,24 @@ class DoctorPatientLinkRepositoryImpl
 
   @override
   Future<List<DoctorPatientLink>> getPendingLinks() async {
-    final token = await secureStorage.read(key: 'token') ?? '';
-    if (token.isEmpty) throw Exception('No token');
-    final uuid = await remote.fetchPatientUuid(token);
-    return remote.fetchPendingLinks(uuid, token);
+    final patientUuid = await secureStorage.read(key: 'patient_uuid');
+    if (patientUuid == null || patientUuid.isEmpty) {
+      throw Exception('Patient UUID not found in storage');
+    }
+    return remote.fetchPendingLinks(patientUuid);
   }
 
   @override
   Future<void> acceptLink(String externalId) async {
-    final token = await secureStorage.read(key: 'token') ?? '';
-    if (token.isEmpty) throw Exception('No token');
-    await remote.patchAcceptLink(externalId, token);
+    return remote.patchAcceptLink(externalId);
+  }
+
+  @override
+  Future<List<DoctorPatientLink>> getActiveLinks() async {
+    final patientUuid = await secureStorage.read(key: 'patient_uuid');
+    if (patientUuid == null || patientUuid.isEmpty) {
+      throw Exception('Patient UUID not found in storage');
+    }
+    return remote.fetchActiveLinks(patientUuid);
   }
 }

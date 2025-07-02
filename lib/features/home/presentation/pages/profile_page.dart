@@ -1,9 +1,13 @@
+// lib/features/auth/presentation/pages/profile_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../auth/presentation/bloc/auth_state.dart';
+import '/features/doctor_patient_links/presentation/pages/pending_requests_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -30,12 +34,16 @@ class ProfilePage extends StatelessWidget {
           body: SafeArea(
             child: Column(
               children: [
+                // HEADER
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color.fromARGB(255, 44, 194, 49), Color.fromARGB(255, 105, 96, 197)],
+                      colors: [
+                        Color.fromARGB(255, 44, 194, 49),
+                        Color.fromARGB(255, 105, 96, 197),
+                      ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
@@ -78,7 +86,7 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                // ===== Card con datos mínimos =====
+                // DATOS DE USUARIO
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Card(
@@ -114,7 +122,36 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
 
+                const SizedBox(height: 16),
+
+                // NUEVO BOTÓN: REDIRIGIR A SOLICITUDES DE DOCTORES
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.request_page),
+                    label: const Text('Solicitudes de Doctores'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white, // o el color que prefieras
+                      shadowColor: Colors.deepPurple,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const PendingRequestsPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
                 const Spacer(),
+
+                // BOTÓN CERRAR SESIÓN
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
                   child: ElevatedButton.icon(
@@ -130,6 +167,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 32),
               ],
             ),

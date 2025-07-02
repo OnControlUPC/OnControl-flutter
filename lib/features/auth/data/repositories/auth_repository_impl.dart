@@ -1,6 +1,8 @@
+// lib/features/auth/data/auth_repository_impl.dart
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/repositories/auth_repository.dart';
-import '../datasources/auth_remote_datasource.dart';
+import '.././datasources/auth_remote_datasource.dart';
 import '../models/user_model.dart';
 
 /// Implementación de `AuthRepository` usando `AuthRemoteDataSource`
@@ -15,10 +17,18 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<UserModel> login(String identifier, String password) async {
+    // 1️⃣ Llamada al endpoint de login
     print('▶️ [AuthRepo.login] identifier=$identifier');
     final user = await remoteDataSource.login(identifier, password);
+
+    // 2️⃣ Guardar el token recibido
     await secureStorage.write(key: 'token', value: user.token);
     print('✅ [AuthRepo.login] token guardado: ${user.token}');
+
+    // 3️⃣ Obtener y guardar el UUID del paciente
+    final patientUuid = await remoteDataSource.getPatientUuid();
+    print('✅ [AuthRepo.login] patientUuid guardado: $patientUuid');
+
     return user;
   }
 
@@ -34,6 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> logout() async {
     print('▶️ [AuthRepo.logout]');
     await secureStorage.delete(key: 'token');
-    print('✅ [AuthRepo.logout] token eliminado');
+    await secureStorage.delete(key: 'patient_uuid');
+    print('✅ [AuthRepo.logout] token y patient_uuid eliminados');
   }
 }

@@ -1,7 +1,7 @@
 import '../entities/treatment.dart';
 
-/// Interfaz de repositorio para tratamientos de un paciente.
+/// Repositorio para gestión de tratamientos.
 abstract class TreatmentRepository {
-  /// Obtiene la lista de tratamientos para el paciente autenticado.
-  Future<List<Treatment>> getTreatments(String patientUuid, String token);
+  /// Recupera todos los tratamientos del paciente autenticado.
+  Future<List<Treatment>> getTreatments();
 }

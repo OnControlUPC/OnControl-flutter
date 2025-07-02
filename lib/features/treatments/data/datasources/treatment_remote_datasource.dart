@@ -1,38 +1,40 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import '../../../../core/config.dart';
 import '../../../../core/http_client.dart';
 import '../../domain/entities/treatment.dart';
 
-/// Fuente remota HTTP para tratamientos.
+/// Fuente de datos HTTP para tratamientos.
 abstract class TreatmentRemoteDataSource {
-  Future<List<Treatment>> fetchTreatments(String patientUuid, String token);
+  /// Obtiene la lista de tratamientos del paciente.
+  Future<List<Treatment>> fetchTreatments(String patientUuid);
 }
 
 class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
-  final http.Client client;
+  final http.Client _client;
 
   TreatmentRemoteDataSourceImpl({http.Client? client})
-      : client = client ?? createHttpClient();
+      : _client = client ?? createHttpClient();
 
   @override
-  Future<List<Treatment>> fetchTreatments(String patientUuid, String token) async {
+  Future<List<Treatment>> fetchTreatments(String patientUuid) async {
     final uri = Uri.parse(
       '${Config.BASE_URL}${Config.TREATMENTS_URL}/$patientUuid',
     );
-    print('🔵 [TreatmentDS] GET → $uri');
-    final resp = await client.get(
+    debugPrint('🔵 [TreatmentDS] GET Treatments → $uri');
+
+    final resp = await _client.get(
       uri,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Content-Type': 'application/json'},
     );
-    print('◀️ Status: ${resp.statusCode}');
-    print('◀️ Body:   ${resp.body}');
+    debugPrint('⬅️ [TreatmentDS] status: ${resp.statusCode}');
+    debugPrint('⬅️ [TreatmentDS] body:   ${resp.body}');
+
     if (resp.statusCode != 200) {
-      throw Exception('Failed fetchTreatments: ${resp.statusCode}');
+      throw Exception('fetchTreatments failed: ${resp.statusCode}');
     }
+
     final list = json.decode(resp.body) as List<dynamic>;
     return list
         .map((e) => Treatment.fromJson(e as Map<String, dynamic>))

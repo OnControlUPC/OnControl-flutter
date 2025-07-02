@@ -4,17 +4,21 @@ import '../../domain/repositories/treatment_repository.dart';
 import '../datasources/treatment_remote_datasource.dart';
 
 class TreatmentRepositoryImpl implements TreatmentRepository {
-  final TreatmentRemoteDataSource remote;
-  final FlutterSecureStorage secureStorage;
+  final TreatmentRemoteDataSource _remote;
+  final FlutterSecureStorage _secureStorage;
 
   TreatmentRepositoryImpl({
-    required this.remote,
-    required this.secureStorage,
-  });
+    required TreatmentRemoteDataSource remote,
+    required FlutterSecureStorage secureStorage,
+  })  : _remote = remote,
+        _secureStorage = secureStorage;
 
   @override
-  Future<List<Treatment>> getTreatments(String patientUuid, String token) {
-    print('▶️ [TreatmentRepo] getTreatments uuid=$patientUuid');
-    return remote.fetchTreatments(patientUuid, token);
+  Future<List<Treatment>> getTreatments() async {
+    final patientUuid = await _secureStorage.read(key: 'patient_uuid');
+    if (patientUuid == null || patientUuid.isEmpty) {
+      throw Exception('Patient UUID not found in storage');
+    }
+    return _remote.fetchTreatments(patientUuid);
   }
 }

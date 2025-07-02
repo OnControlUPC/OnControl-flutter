@@ -1,135 +1,122 @@
-// lib/features/treatments/presentation/pages/treatment_detail_page.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../doctor_patient_links/data/datasources/doctor_patient_link_remote_datasource.dart';
+import '../../../doctor_patient_links/data/repositories/doctor_patient_link_repository_impl.dart';
+import '../../../doctor_patient_links/domain/entities/doctor_patient_link.dart';
+import '../../../doctor_patient_links/presentation/pages/chat_screen.dart'; // <-- importar ChatScreen
 import '../../domain/entities/treatment.dart';
 
-class TreatmentDetailPage extends StatelessWidget {
+class TreatmentDetailPage extends StatefulWidget {
   final Treatment treatment;
+  const TreatmentDetailPage({required this.treatment, Key? key}) : super(key: key);
 
-  const TreatmentDetailPage({Key? key, required this.treatment})
-      : super(key: key);
+  @override
+  _TreatmentDetailPageState createState() => _TreatmentDetailPageState();
+}
 
-  String _formatDate(DateTime date) =>
-      date.toLocal().toString().split(' ')[0];
+class _TreatmentDetailPageState extends State<TreatmentDetailPage> {
+  late final Future<String> _futureDoctorName;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureDoctorName = _loadDoctorName();
+  }
+
+  Future<String> _loadDoctorName() async {
+    final storage = const FlutterSecureStorage();
+    final patientUuid = await storage.read(key: 'patient_uuid');
+    if (patientUuid == null || patientUuid.isEmpty) {
+      throw Exception('No patient_uuid in storage');
+    }
+
+    final repo = DoctorPatientLinkRepositoryImpl(
+      remote: DoctorPatientLinkRemoteDataSourceImpl(),
+      secureStorage: storage,
+    );
+
+    final List<DoctorPatientLink> links = await repo.getActiveLinks();
+
+    final match = links.firstWhere(
+      (link) => link.doctorUuid == widget.treatment.doctorProfileUuid,
+      orElse: () => throw Exception('Link doctor not found'),
+    );
+    return match.doctorFullName;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: SafeArea(
-        child: Column(
+      appBar: AppBar(title: const Text('Detalle del Tratamiento')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
           children: [
-            // Encabezado degradado
-            Container(
-  width: double.infinity,
-  padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-  decoration: const BoxDecoration(
-    gradient: LinearGradient(
-      colors: [
-        Color.fromARGB(255, 44, 194, 49),
-        Color.fromARGB(255, 105, 96, 197),
-      ],
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    ),
-    borderRadius: BorderRadius.only(
-      bottomLeft: Radius.circular(24),
-      bottomRight: Radius.circular(24),
-    ),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      const SizedBox(height: 8),
-      Center(
-        child: Column(
-          children: [
-            const Icon(Icons.assignment_turned_in, size: 56, color: Colors.white),
-            const SizedBox(height: 12),
-            Text(
-              treatment.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            // Title
+            Text('Title:', style: theme.titleMedium),
+            Text(widget.treatment.title.value, style: theme.bodyMedium),
+            const Divider(),
+
+            // Doctor Name con navegación a chat
+            Text('Doctor:', style: theme.titleMedium),
+            FutureBuilder<String>(
+              future: _futureDoctorName,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Text(
+                    'Cargando doctor…',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  );
+                } else if (snap.hasError) {
+                  return Text('Error: \${snap.error}', style: theme.bodyMedium);
+                }
+                final name = snap.data!;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(name, style: theme.bodyMedium),
+                    IconButton(
+                      icon: Icon(Icons.chat, color: Theme.of(context).colorScheme.primary),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ChatScreen(
+                              doctorUuid: widget.treatment.doctorProfileUuid,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 6),
-            Text(
-              '${_formatDate(treatment.startDate)} → ${_formatDate(treatment.endDate)}',
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
-            ),
+            const Divider(),
+
+            // Status
+            Text('Status:', style: theme.titleMedium),
+            Text(widget.treatment.status, style: theme.bodyMedium),
+            const Divider(),
+
+            // Created & Updated
+            Text('Created:', style: theme.titleMedium),
+            Text(widget.treatment.createdAt.toLocal().toString(), style: theme.bodyMedium),
+            const SizedBox(height: 4),
+            Text('Updated:', style: theme.titleMedium),
+            Text(widget.treatment.updatedAt.toLocal().toString(), style: theme.bodyMedium),
+            const Divider(),
+
+            // Period
+            Text('Period:', style: theme.titleMedium),
+            Text('From: ${widget.treatment.period.startDate.toLocal()}', style: theme.bodyMedium),
+            Text('To:   ${widget.treatment.period.endDate.toLocal()}', style: theme.bodyMedium),
+            const Divider(),
           ],
         ),
       ),
-    ],
-  ),
-),
-
-
-            const SizedBox(height: 20),
-
-            // Tarjeta de detalles (no se expande)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 3,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _infoRow(
-                        icon: Icons.check_circle_outline,
-                        label: 'Estado',
-                        value: treatment.status,
-                      ),
-                      const Divider(indent: 48, endIndent: 16),
-                      _infoRow(
-                        icon: Icons.date_range,
-                        label: 'Fecha de creación',
-                        value: _formatDate(treatment.createdAt),
-                      ),
-                      const Divider(indent: 48, endIndent: 16),
-                      _infoRow(
-                        icon: Icons.person_pin,
-                        label: 'Doctor UUID',
-                        value: treatment.doctorProfileUuid,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            const Spacer(),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: const Color.fromARGB(255, 49, 209, 79)),
-      title: Text(label),
-      subtitle: Text(value),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8),
     );
   }
 }

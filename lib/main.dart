@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'core/http_client.dart';
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
@@ -18,13 +16,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final secureStorage = FlutterSecureStorage();
-  final sharedPrefs = await SharedPreferences.getInstance();
   final client = createHttpClient();
 
   final authDS = AuthRemoteDataSourceImpl(
     client: client,
     secureStorage: secureStorage,
-    sharedPreferences: sharedPrefs,
   );
   final authRepo = AuthRepositoryImpl(
     remoteDataSource: authDS,

@@ -3,12 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../../core/http_client.dart';
-import '../../../doctor_patient_links/data/datasources/doctor_patient_link_remote_datasource.dart';
+import 'package:flutter/foundation.dart';
 import '../../../treatments/data/datasources/treatment_remote_datasource.dart';
 import '../../../treatments/data/repositories/treatment_repository_impl.dart';
 import '../../../treatments/domain/entities/treatment.dart';
-import '/features/treatments/presentation/pages/treatment_detail_page.dart';
+import '../../../treatments/presentation/pages/treatment_detail_page.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({Key? key}) : super(key: key);
@@ -19,9 +18,7 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  late final TreatmentRepositoryImpl _repo;
-  late final DoctorPatientLinkRemoteDataSourceImpl _linkDs;
-
+  late final TreatmentRepositoryImpl _treatmentRepo;
   List<Treatment> _treatments = [];
   Map<DateTime, List<Treatment>> _events = {};
   DateTime _focusedDay = DateTime.now();
@@ -32,11 +29,10 @@ class _CalendarPageState extends State<CalendarPage> {
   @override
   void initState() {
     super.initState();
-    _repo = TreatmentRepositoryImpl(
+    _treatmentRepo = TreatmentRepositoryImpl(
       remote: TreatmentRemoteDataSourceImpl(),
       secureStorage: _storage,
     );
-    _linkDs = DoctorPatientLinkRemoteDataSourceImpl(client: createHttpClient());
     _loadTreatments();
   }
 
@@ -45,25 +41,13 @@ class _CalendarPageState extends State<CalendarPage> {
       _loading = true;
       _error = null;
     });
-
-    final token = await _storage.read(key: 'token') ?? '';
-    if (token.isEmpty) {
-      setState(() {
-        _error = 'Sesión no iniciada';
-        _loading = false;
-      });
-      return;
-    }
-
     try {
-      final patientUuid = await _linkDs.fetchPatientUuid(token);
-      final list = await _repo.getTreatments(patientUuid, token);
-      _treatments = list;
+      _treatments = await _treatmentRepo.getTreatments();
       _buildEventMap();
     } catch (e) {
+      debugPrint('Error loading treatments: $e');
       _error = 'Error cargando tratamientos';
     }
-
     setState(() {
       _loading = false;
     });
@@ -71,27 +55,43 @@ class _CalendarPageState extends State<CalendarPage> {
 
   void _buildEventMap() {
     _events.clear();
-    for (var treatment in _treatments) {
-      DateTime day = treatment.startDate.toLocal();
-      final end = treatment.endDate.toLocal();
+    for (var t in _treatments) {
+      DateTime day = DateTime(
+        t.period.startDate.year,
+        t.period.startDate.month,
+        t.period.startDate.day,
+      );
+      final end = DateTime(
+        t.period.endDate.year,
+        t.period.endDate.month,
+        t.period.endDate.day,
+      );
       while (!day.isAfter(end)) {
-        final key = DateTime(day.year, day.month, day.day);
-        _events.putIfAbsent(key, () => []).add(treatment);
+        _events.putIfAbsent(day, () => []).add(t);
         day = day.add(const Duration(days: 1));
       }
     }
   }
 
   List<Treatment> _getEventsForDay(DateTime day) {
-    return _events[DateTime(day.year, day.month, day.day)] ?? [];
+    final key = DateTime(day.year, day.month, day.day);
+    return _events[key] ?? [];
   }
 
   String _formatDate(DateTime date) => date.toLocal().toString().split(' ')[0];
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (_error != null) return Scaffold(body: Center(child: Text(_error!)));
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_error != null) {
+      return Scaffold(
+        body: Center(child: Text(_error!)),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -169,46 +169,46 @@ class _CalendarPageState extends State<CalendarPage> {
 
             // Lista de tratamientos del día
             Expanded(
-  child: _selectedDay == null
-      ? const Center(child: Text('Seleccione un día para ver tratamientos'))
-      : Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: ListView.builder(
-            itemCount: _getEventsForDay(_selectedDay!).length,
-            itemBuilder: (context, i) {
-              final t = _getEventsForDay(_selectedDay!)[i];
-              return Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 3,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  title: Text(
-                    t.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text('Desde ${_formatDate(t.startDate)}'),
-                  trailing: Text(
-                    t.status,
-                    style: const TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
+              child: _selectedDay == null
+                  ? const Center(child: Text('Seleccione un día para ver tratamientos'))
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: ListView.builder(
+                        itemCount: _getEventsForDay(_selectedDay!).length,
+                        itemBuilder: (context, i) {
+                          final t = _getEventsForDay(_selectedDay!)[i];
+                          return Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 3,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              title: Text(
+                                t.title.value,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: Text('Desde ${_formatDate(t.period.startDate)}'),
+                              trailing: Text(
+                                t.status,
+                                style: const TextStyle(
+                                  color: Colors.teal,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TreatmentDetailPage(treatment: t),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TreatmentDetailPage(treatment: t),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-),
+            ),
 
             const SizedBox(height: 16),
           ],
