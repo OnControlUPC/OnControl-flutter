@@ -63,7 +63,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.medical_services),
-            label: 'Solicitudes',
+            label: 'Citas',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.message),
