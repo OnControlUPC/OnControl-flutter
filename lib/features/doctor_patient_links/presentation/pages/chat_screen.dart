@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/config.dart';
@@ -36,20 +37,20 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    // 🚀 Cargar mensajes antiguos al iniciar
+    await _loadPastMessages();
+
+    // 🔌 Iniciar conexión STOMP (sin cambios en tu lógica)
     _stompClient = StompClient(
       config: StompConfig.sockJS(
         url: '${Config.BASE_URL}/ws',
-        stompConnectHeaders: {
-          'Authorization': 'Bearer $_token',
-        },
-        webSocketConnectHeaders: {
-          'Authorization': 'Bearer $_token',
-        },
+        stompConnectHeaders: {'Authorization': 'Bearer $_token'},
+        webSocketConnectHeaders: {'Authorization': 'Bearer $_token'},
         beforeConnect: () async {
           debugPrint('🔄 Conectando al websocket...');
           await Future.delayed(const Duration(milliseconds: 200));
         },
-        onConnect: _onStompConnect,
+        onConnect: _onConnect,
         onStompError: (f) => debugPrint('STOMP Error: ${f.body}'),
         onWebSocketError: (e) => debugPrint('WS Error: $e'),
         onDisconnect: (_) => debugPrint('🔌 Desconectado'),
@@ -57,12 +58,38 @@ class _ChatScreenState extends State<ChatScreen> {
     )..activate();
   }
 
-  void _onStompConnect(StompFrame frame) {
+  // 📥 Obtener mensajes antiguos en orden cronológico
+  Future<void> _loadPastMessages() async {
+    final uri = Uri.parse(
+      '${Config.BASE_URL}/api/v1/conversations/${widget.doctorUuid}/$_patientUuid?page=0&size=50',
+    );
+    final response = await http.get(uri, headers: {
+      'Authorization': 'Bearer $_token',
+      'Content-Type': 'application/json',
+    });
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body) as List<dynamic>;
+      setState(() {
+        _messages.addAll(
+          data
+              .map((m) => '🕒 ${m['senderRole']}: ${m['content']}')
+              .toList()
+              .reversed, // ✅ Más antiguos primero
+        );
+      });
+      _scrollToBottom();
+    } else {
+      debugPrint('Error cargando mensajes antiguos: ${response.statusCode}');
+    }
+  }
+
+  void _onConnect(StompFrame frame) {
     final dest = '/topic/chat.${widget.doctorUuid}.$_patientUuid';
     _stompClient.subscribe(
       destination: dest,
       callback: (f) {
-        final body = jsonDecode(f.body!);
+        final body = json.decode(f.body!);
         setState(() => _messages.add('🟢 ${body['senderRole']}: ${body['content']}'));
         _scrollToBottom();
       },
@@ -100,32 +127,35 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat con el Doctor')),
+      appBar: AppBar(title: const Text('Chat con tu Doctor')),
       body: Column(
         children: [
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
               itemCount: _messages.length,
+              reverse: false, // Mostrar en orden cronológico: antiguo arriba
               itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(8.0),
                 child: Text(_messages[i]),
               ),
             ),
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration:
-                        const InputDecoration(hintText: 'Escribe un mensaje...'),
+                    decoration: const InputDecoration(hintText: 'Escribe un mensaje...'),
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                ),
               ],
             ),
           ),
