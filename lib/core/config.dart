@@ -18,5 +18,7 @@ class Config {
   static const String ACTIVE_LINKS_URL      = '/api/v1/doctor-patient-links/patient';
 
   static const String TREATMENTS_URL = '/api/v1/treatments/patient';
+  static const String SYMPTOMS_URL = '/api/v1/treatments';
+
 
 }
