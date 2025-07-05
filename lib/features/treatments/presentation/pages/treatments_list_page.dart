@@ -36,6 +36,7 @@ class _TreatmentsListPageState extends State<TreatmentsListPage> {
     _futureTreatments = _treatmentRepo.getTreatments();
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

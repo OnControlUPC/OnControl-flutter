@@ -5,8 +5,7 @@ import '../../../patients/domain/entities/patient_profile.dart';
 
 abstract class PatientRemoteDataSource {
   Future<void> createProfile(
-    PatientProfile profile,
-    String token,
+    PatientProfile profile
   );
 }
 
@@ -17,8 +16,7 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
 
   @override
   Future<void> createProfile(
-    PatientProfile profile,
-    String token,
+    PatientProfile profile
   ) async {
     final uri = Uri.parse('${Config.BASE_URL}${Config.CREATE_PROFILE_URL}');
     final body = jsonEncode({
@@ -34,8 +32,7 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
     final response = await client.post(
       uri,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json'
       },
       body: body,
     );

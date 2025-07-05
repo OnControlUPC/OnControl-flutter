@@ -10,8 +10,7 @@ class PatientRepositoryImpl implements PatientRepository {
 
   @override
   Future<void> createProfile(
-    PatientProfile profile,
-    String token,
-  ) => remote.createProfile(profile, token);
+    PatientProfile profile
+  ) => remote.createProfile(profile);
 }
 

@@ -26,8 +26,8 @@ class AuthRepositoryImpl implements AuthRepository {
     print('✅ [AuthRepo.login] token guardado: ${user.token}');
 
     // 3️⃣ Obtener y guardar el UUID del paciente
-    final patientUuid = await remoteDataSource.getPatientUuid();
-    print('✅ [AuthRepo.login] patientUuid guardado: $patientUuid');
+    //final patientUuid = await remoteDataSource.getPatientUuid();
+    //print('✅ [AuthRepo.login] patientUuid guardado: $patientUuid');
 
     return user;
   }

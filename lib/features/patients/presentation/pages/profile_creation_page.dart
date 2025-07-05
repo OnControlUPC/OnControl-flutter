@@ -86,7 +86,7 @@ class _ProfileCreationPageState extends State<ProfileCreationPage> {
     );
 
     try {
-      await _repository.createProfile(profile, token);
+      await _repository.createProfile(profile);
       print('✅ [ProfilePage] Perfil creado exitosamente');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil creado exitosamente')),

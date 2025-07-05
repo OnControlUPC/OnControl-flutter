@@ -7,7 +7,6 @@ abstract class PatientRepository {
   /// Crea o actualiza el perfil en el backend.
   /// Lanza excepción si la operación falla.
   Future<void> createProfile(
-    PatientProfile profile,
-    String token,
+    PatientProfile profile
   );
 }
