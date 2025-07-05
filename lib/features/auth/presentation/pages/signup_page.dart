@@ -151,11 +151,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   },
                 ),
                 const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () =>
-                      Navigator.of(context).pushReplacementNamed('/login'),
-                  child: const Text('¿Ya tienes cuenta? Iniciar sesión'),
-                ),
+
               ],
             ),
           ),
