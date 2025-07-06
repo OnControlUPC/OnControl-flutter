@@ -14,7 +14,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> signUp(String name, String email, String password, String role);
 
   /// Obtiene el UUID del paciente logueado y lo guarda en secure storage
-  Future<String> getPatientUuid();
+  Future<String> getPatientUuid(String token);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -95,13 +95,16 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<String> getPatientUuid() async {
+  Future<String> getPatientUuid(String token) async {
     final uri = Uri.parse(Config.BASE_URL + Config.PATIENT_UUID_URL);
     debugPrint('🔵 [AuthRemoteDataSourceImpl.getPatientUuid] URL → $uri');
 
     final response = await client.get(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      }
     );
 
     debugPrint('⬅️ [AuthRemoteDataSourceImpl.getPatientUuid] Status → ${response.statusCode}');
@@ -117,6 +120,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       debugPrint('✅ [AuthRemoteDataSourceImpl.getPatientUuid] Patient UUID almacenado → $uuid');
 
       return uuid;
+      } else if (response.statusCode == 404) {
+      debugPrint('⚠️ [AuthRemoteDataSourceImpl.getPatientUuid] UUID no encontrado');
+      return '';
     } else {
       debugPrint('❌ [AuthRemoteDataSourceImpl.getPatientUuid] Falló la petición (${response.statusCode})');
       throw Exception('getPatientUuid failed: ${response.statusCode}');

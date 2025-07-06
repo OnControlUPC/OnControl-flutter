@@ -1,7 +1,9 @@
 /// lib/features/patients/presentation/pages/profile_creation_page.dart
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/http_client.dart';
 import '../../domain/entities/patient_profile.dart';
 import '../../data/datasources/patient_remote_datasource.dart';
@@ -32,6 +34,8 @@ class _ProfileCreationPageState extends State<ProfileCreationPage> {
   String? _gender;
   final _photoUrlController = TextEditingController();
   bool _isLoading = false;
+  bool _isUploadingPhoto = false;
+  int _step = 0;
 
   late final PatientRepositoryImpl _repository;
 
@@ -101,6 +105,124 @@ class _ProfileCreationPageState extends State<ProfileCreationPage> {
       setState(() => _isLoading = false);
     }
   }
+  Future<void> _pickAndUploadImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    final token = widget.token ??
+        await const FlutterSecureStorage().read(key: 'token');
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: token no disponible')),
+      );
+      return;
+    }
+
+    setState(() => _isUploadingPhoto = true);
+    try {
+      final url = await _repository.uploadProfilePhoto(File(picked.path), token);
+      _photoUrlController.text = url;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto subida correctamente')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al subir foto: $e')),
+      );
+    } finally {
+      setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  void _goToPhotoStep() {
+    setState(() => _step = 1);
+  }
+
+  Widget _buildInfoStep() {
+    return ListView(
+      key: const ValueKey(0),
+      children: [
+        TextFormField(
+          initialValue: widget.email,
+          decoration: const InputDecoration(labelText: 'Correo'),
+          enabled: false,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _firstNameController,
+          decoration: const InputDecoration(labelText: 'Nombre'),
+          validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _lastNameController,
+          decoration: const InputDecoration(labelText: 'Apellidos'),
+          validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _phoneController,
+          decoration: const InputDecoration(labelText: 'Teléfono'),
+          keyboardType: TextInputType.phone,
+          validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _birthDateController,
+          decoration: const InputDecoration(
+            labelText: 'Fecha de nacimiento',
+            hintText: 'YYYY-MM-DD',
+          ),
+          validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _gender,
+          items: const [
+            DropdownMenuItem(value: 'MALE', child: Text('Masculino')),
+            DropdownMenuItem(value: 'FEMALE', child: Text('Femenino')),
+          ],
+          onChanged: (v) => setState(() => _gender = v),
+          decoration: const InputDecoration(labelText: 'Género'),
+          validator: (v) => v == null ? 'Requerido' : null,
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _goToPhotoStep,
+          child: const Text('Siguiente'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPhotoStep() {
+    return ListView(
+      key: const ValueKey(1),
+      children: [
+        TextFormField(
+          controller: _photoUrlController,
+          decoration: const InputDecoration(labelText: 'URL de foto'),
+          readOnly: true,
+        ),
+        const SizedBox(height: 8),
+        _isUploadingPhoto
+            ? const Center(child: CircularProgressIndicator())
+            : ElevatedButton.icon(
+                onPressed: _pickAndUploadImage,
+                icon: const Icon(Icons.photo),
+                label: const Text('Seleccionar foto'),
+              ),
+        const SizedBox(height: 24),
+        _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ElevatedButton(
+                onPressed: _submitProfile,
+                child: const Text('Crear cuenta'),
+              ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,65 +232,12 @@ class _ProfileCreationPageState extends State<ProfileCreationPage> {
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: ListView(
+            child: IndexedStack(
+            index: _step,
             children: [
-              TextFormField(
-                initialValue: widget.email,
-                decoration: const InputDecoration(labelText: 'Correo'),
-                enabled: false,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'Nombre'),
-                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Apellidos'),
-                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Teléfono'),
-                keyboardType: TextInputType.phone,
-                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _birthDateController,
-                decoration: const InputDecoration(
-                  labelText: 'Fecha de nacimiento',
-                  hintText: 'YYYY-MM-DD',
-                ),
-                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _gender,
-                items: const [
-                  DropdownMenuItem(value: 'MALE', child: Text('Masculino')),
-                  DropdownMenuItem(value: 'FEMALE', child: Text('Femenino')),
-                ],
-                onChanged: (v) => setState(() => _gender = v),
-                decoration: const InputDecoration(labelText: 'Género'),
-                validator: (v) => v == null ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _photoUrlController,
-                decoration: const InputDecoration(labelText: 'URL de foto'),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 24),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ElevatedButton(
-                      onPressed: _submitProfile,
-                      child: const Text('Guardar perfil'),
-                    ),
+              _buildInfoStep(),
+              _buildPhotoStep(),
+
             ],
           ),
         ),

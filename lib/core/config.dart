@@ -20,5 +20,7 @@ class Config {
   static const String TREATMENTS_URL = '/api/v1/treatments/patient';
   static const String SYMPTOMS_URL = '/api/v1/treatments';
 
+    static const String UPLOAD_PHOTO_URL = '/api/v1/uploads/profile-photo';
+
 
 }

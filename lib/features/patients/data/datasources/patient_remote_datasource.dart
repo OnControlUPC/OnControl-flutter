@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../../../../core/config.dart';
 import '../../../patients/domain/entities/patient_profile.dart';
@@ -6,6 +7,11 @@ import '../../../patients/domain/entities/patient_profile.dart';
 abstract class PatientRemoteDataSource {
   Future<void> createProfile(
     PatientProfile profile
+  );
+    /// Sube una imagen de perfil y devuelve la URL generada
+  Future<String> uploadProfilePhoto(
+    File file,
+    String token,
   );
 }
 
@@ -39,6 +45,23 @@ class PatientRemoteDataSourceImpl implements PatientRemoteDataSource {
     if (response.statusCode != 201) {
       throw Exception('Error al crear perfil: \${response.statusCode}');
     }
+  }
+    @override
+  Future<String> uploadProfilePhoto(
+    File file,
+    String token,
+  ) async {
+    final uri = Uri.parse('${Config.BASE_URL}${Config.UPLOAD_PHOTO_URL}');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+    final response = await client.send(request);
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Error al subir foto: ${response.statusCode}');
+    }
+    final body = await response.stream.bytesToString();
+    final data = jsonDecode(body) as Map<String, dynamic>;
+    return data['url'] as String;
   }
 }
 
