@@ -4,6 +4,8 @@ import '../../domain/entities/symptom.dart';
 import '../../domain/entities/symptom_log.dart';
 import '../../domain/repositories/treatment_repository.dart';
 import '../datasources/treatment_remote_datasource.dart';
+import '../../domain/entities/procedure.dart';
+import '../../domain/entities/predicted_execution.dart';
 
 class TreatmentRepositoryImpl implements TreatmentRepository {
   final TreatmentRemoteDataSource _remote;
@@ -43,5 +45,22 @@ class TreatmentRepositoryImpl implements TreatmentRepository {
       from: from,
       to: to,
     );
+  }
+
+    @override
+  Future<List<Procedure>> getProcedures(
+      String treatmentExternalId) async {
+    return _remote.fetchProcedures(treatmentExternalId);
+  }
+
+  @override
+  Future<void> startProcedure(int procedureId) async {
+    await _remote.startProcedure(procedureId);
+  }
+
+  @override
+  Future<List<PredictedExecution>> getPredictedExecutions(
+      String treatmentExternalId) async {
+    return _remote.fetchPredictedExecutions(treatmentExternalId);
   }
 }

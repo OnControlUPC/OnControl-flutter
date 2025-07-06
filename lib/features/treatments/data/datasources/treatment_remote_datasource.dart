@@ -6,6 +6,8 @@ import '../../../../core/http_client.dart';
 import '../../domain/entities/treatment.dart';
 import '../../domain/entities/symptom.dart';
 import '../../domain/entities/symptom_log.dart';
+import '../../domain/entities/procedure.dart';
+import '../../domain/entities/predicted_execution.dart';
 
 /// Fuente de datos HTTP para tratamientos.
 abstract class TreatmentRemoteDataSource {
@@ -18,6 +20,17 @@ abstract class TreatmentRemoteDataSource {
     required DateTime from,
     required DateTime to,
   });
+
+
+  /// Lista de procedimientos para un tratamiento.
+  Future<List<Procedure>> fetchProcedures(String treatmentExternalId);
+
+  /// Inicia un procedimiento pendiente.
+  Future<void> startProcedure(int procedureId);
+
+  /// Devuelve las ejecuciones previstas de los procedimientos.
+  Future<List<PredictedExecution>> fetchPredictedExecutions(
+      String treatmentExternalId);
 }
 
 class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
@@ -84,4 +97,57 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
     final data = json.decode(resp.body) as List<dynamic>;
     return data.map((e) => SymptomLog.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  @override
+  Future<List<Procedure>> fetchProcedures(String treatmentExternalId) async {
+    final uri = Uri.parse(
+        '${Config.BASE_URL}/api/v1/treatments/$treatmentExternalId/procedures');
+    debugPrint('🔵 [TreatmentDS] GET Procedures → $uri');
+    final resp = await _client.get(uri,
+        headers: {'Content-Type': 'application/json'});
+    debugPrint('⬅️ status: ${resp.statusCode}');
+    debugPrint('⬅️ body:   ${resp.body}');
+    if (resp.statusCode != 200) {
+      throw Exception('fetchProcedures failed: ${resp.statusCode}');
+    }
+    final data = json.decode(resp.body) as List<dynamic>;
+    return data
+        .map((e) => Procedure.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> startProcedure(int procedureId) async {
+    final uri = Uri.parse(
+        '${Config.BASE_URL}/api/v1/treatments/procedures/$procedureId/start');
+    debugPrint('🔵 [TreatmentDS] PATCH startProcedure → $uri');
+    final resp = await _client.patch(uri,
+        headers: {'Content-Type': 'application/json'});
+    debugPrint('⬅️ status: ${resp.statusCode}');
+    if (resp.statusCode != 200 && resp.statusCode != 204) {
+      throw Exception('startProcedure failed: ${resp.statusCode}');
+    }
+  }
+
+  @override
+  Future<List<PredictedExecution>> fetchPredictedExecutions(
+      String treatmentExternalId) async {
+    final uri = Uri.parse(
+        '${Config.BASE_URL}/api/v1/treatments/$treatmentExternalId/predicted-executions');
+    debugPrint('🔵 [TreatmentDS] GET PredictedExecutions → $uri');
+    final resp = await _client.get(uri,
+        headers: {'Content-Type': 'application/json'});
+    debugPrint('⬅️ status: ${resp.statusCode}');
+    debugPrint('⬅️ body:   ${resp.body}');
+    if (resp.statusCode != 200) {
+      throw Exception(
+          'fetchPredictedExecutions failed: ${resp.statusCode}');
+    }
+    final data = json.decode(resp.body) as List<dynamic>;
+    return data
+        .map((e) => PredictedExecution.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+
 }

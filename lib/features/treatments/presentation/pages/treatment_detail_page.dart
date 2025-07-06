@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:oncontrol/features/treatments/presentation/pages/treatment_procedures_page.dart';
 import '../../../doctor_patient_links/data/datasources/doctor_patient_link_remote_datasource.dart';
 import '../../../doctor_patient_links/data/repositories/doctor_patient_link_repository_impl.dart';
 import '../../../doctor_patient_links/presentation/pages/chat_screen.dart';
@@ -112,6 +113,20 @@ class _TreatmentDetailPageState extends State<TreatmentDetailPage> {
               },
               icon: const Icon(Icons.healing),
               label: const Text('Ver y reportar síntomas'),
+            ),
+
+            // Botón a página de procedimientos
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TreatmentProcedurePage(treatment: widget.treatment),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.healing),
+              label: const Text('Procedimientos'),
             ),
           ],
         ),
