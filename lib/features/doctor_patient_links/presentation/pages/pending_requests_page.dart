@@ -54,6 +54,30 @@ class _PendingRequestsPageState extends State<PendingRequestsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Solicitud aceptada')),
       );
+
+      await _repo.activateLink(externalId);
+      print('✅ [PendingRequests] aceptado $externalId');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud activada')),
+      );
+      await _loadLinks();
+    } catch (e) {
+      print('❌ [PendingRequests] accept error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al aceptar: $e')),
+      );
+      setState(() => _loading = false);
+    }
+  }
+
+    Future<void> _activate(String externalId) async {
+    setState(() => _loading = true);
+    try {
+      await _repo.activateLink(externalId);
+      print('✅ [PendingRequests] aceptado $externalId');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud activada')),
+      );
       await _loadLinks();
     } catch (e) {
       print('❌ [PendingRequests] accept error: $e');
@@ -86,7 +110,10 @@ class _PendingRequestsPageState extends State<PendingRequestsPage> {
                             subtitle: Text(
                                 'Solicitada el ${link.createdAt.toLocal()}'),
                             trailing: ElevatedButton(
-                              onPressed: () => _accept(link.externalId),
+                              onPressed: () => {
+                                _accept(link.externalId),
+                                _activate(link.externalId)
+                                },
                               child: const Text('Aceptar'),
                             ),
                           ),

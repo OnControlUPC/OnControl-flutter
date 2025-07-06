@@ -13,6 +13,8 @@ abstract class DoctorPatientLinkRemoteDataSource {
   /// Acepta la solicitud identificada por externalId.
   Future<void> patchAcceptLink(String externalId);
 
+  Future<void> patchActivateLink(String externalId);
+
   /// Relaciones activas (ya aceptadas) para este paciente
   Future<List<DoctorPatientLink>> fetchActiveLinks(String patientUuid);
 }
@@ -48,6 +50,21 @@ class DoctorPatientLinkRemoteDataSourceImpl
   Future<void> patchAcceptLink(String externalId) async {
     final uri = Uri.parse(
       '${Config.BASE_URL}${Config.ACCEPT_LINK_URL}/$externalId/accept',
+    );
+    debugPrint('🔵 [LinkDS] PATCH Accept → $uri');
+    final resp = await client.patch(uri, headers: {
+      'Content-Type': 'application/json',
+    });
+    debugPrint('⬅️ [LinkDS] Accept status: ${resp.statusCode}');
+    if (resp.statusCode != 200 && resp.statusCode != 204) {
+      throw Exception('patchAcceptLink failed: ${resp.statusCode}');
+    }
+  }
+
+    @override
+  Future<void> patchActivateLink(String externalId) async {
+    final uri = Uri.parse(
+      '${Config.BASE_URL}${Config.ACCEPT_LINK_URL}/$externalId/activate',
     );
     debugPrint('🔵 [LinkDS] PATCH Accept → $uri');
     final resp = await client.patch(uri, headers: {

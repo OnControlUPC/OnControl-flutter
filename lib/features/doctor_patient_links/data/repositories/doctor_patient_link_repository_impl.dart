@@ -24,7 +24,15 @@ class DoctorPatientLinkRepositoryImpl implements DoctorPatientLinkRepository {
   @override
   Future<void> acceptLink(String externalId) async {
     return remote.patchAcceptLink(externalId);
+    
   }
+
+  @override
+  Future<void> activateLink(String externalId) async {
+    return remote.patchActivateLink(externalId);
+  }
+
+
 
   @override
   Future<List<DoctorPatientLink>> getActiveLinks() async {
