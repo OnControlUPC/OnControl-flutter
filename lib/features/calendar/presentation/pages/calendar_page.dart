@@ -180,6 +180,9 @@ class _CalendarPageState extends State<CalendarPage> {
             TableCalendar<Object>(
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2100, 12, 31),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+              ),
               focusedDay: _focusedDay,
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
               eventLoader: _getEventsForDay,
