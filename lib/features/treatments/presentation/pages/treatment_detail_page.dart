@@ -1,49 +1,27 @@
 // lib/features/treatments/presentation/pages/treatment_detail_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:oncontrol/features/treatments/presentation/pages/treatment_procedures_page.dart';
-import '../../../doctor_patient_links/data/datasources/doctor_patient_link_remote_datasource.dart';
-import '../../../doctor_patient_links/data/repositories/doctor_patient_link_repository_impl.dart';
 import '../../../doctor_patient_links/presentation/pages/chat_screen.dart';
 import '../../domain/entities/treatment.dart';
 import 'treatment_symptoms_page.dart';
 
+/// Detalle de un tratamiento, recibiendo el nombre del doctor por parámetro.
+/// Ya no hace ninguna llamada adicional para cargar el nombre.
 class TreatmentDetailPage extends StatefulWidget {
   final Treatment treatment;
-  const TreatmentDetailPage({Key? key, required this.treatment}) : super(key: key);
+  final String doctorName;
+  const TreatmentDetailPage({
+    Key? key,
+    required this.treatment,
+    required this.doctorName,
+  }) : super(key: key);
 
   @override
   _TreatmentDetailPageState createState() => _TreatmentDetailPageState();
 }
 
 class _TreatmentDetailPageState extends State<TreatmentDetailPage> {
-  late Future<String> _futureDoctorName;
-
-  @override
-  void initState() {
-    super.initState();
-    _futureDoctorName = _loadDoctorName();
-  }
-
-  Future<String> _loadDoctorName() async {
-    final storage = const FlutterSecureStorage();
-    final patientUuid = await storage.read(key: 'patient_uuid');
-    if (patientUuid == null || patientUuid.isEmpty) {
-      throw Exception('No patient_uuid in storage');
-    }
-    final repo = DoctorPatientLinkRepositoryImpl(
-      remote: DoctorPatientLinkRemoteDataSourceImpl(),
-      secureStorage: storage,
-    );
-    final links = await repo.getActiveLinks();
-    final match = links.firstWhere(
-      (l) => l.doctorUuid == widget.treatment.doctorProfileUuid,
-      orElse: () => throw Exception('Doctor link not found'),
-    );
-    return match.doctorFullName;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
@@ -62,31 +40,25 @@ class _TreatmentDetailPageState extends State<TreatmentDetailPage> {
 
             // Nombre del doctor + chat
             Text('Doctor', style: theme.titleMedium),
-            FutureBuilder<String>(
-              future: _futureDoctorName,
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Text('Cargando doctor…', style: TextStyle(fontStyle: FontStyle.italic));
-                } else if (snap.hasError) {
-                  return Text('Error: ${snap.error}', style: theme.bodyMedium);
-                }
-                final name = snap.data!;
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(name, style: theme.bodyMedium),
-                    IconButton(
-                      icon: Icon(Icons.chat, color: Theme.of(context).colorScheme.primary),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ChatScreen(doctorUuid: widget.treatment.doctorProfileUuid),
-                        ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(widget.doctorName, style: theme.bodyMedium),
+                IconButton(
+                  icon: Icon(
+                    Icons.chat,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        doctorUuid: widget.treatment.doctorProfileUuid,
                       ),
                     ),
-                  ],
-                );
-              },
+                  ),
+                ),
+              ],
             ),
             const Divider(),
 
@@ -97,31 +69,40 @@ class _TreatmentDetailPageState extends State<TreatmentDetailPage> {
 
             // Período
             Text('Período', style: theme.titleMedium),
-            Text('Desde: ${widget.treatment.period.startDate.toLocal()}', style: theme.bodyMedium),
-            Text('Hasta: ${widget.treatment.period.endDate.toLocal()}', style: theme.bodyMedium),
-            const SizedBox(height: 24),
+            Text(
+              'Desde: ${widget.treatment.period.startDate.toLocal()}',
+              style: theme.bodyMedium,
+            ),
+            Text(
+              'Hasta: ${widget.treatment.period.endDate.toLocal()}',
+              style: theme.bodyMedium,
+            ),
+            const Divider(),
 
-            // Botón a página de síntomas
+            // Botones de navegación
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => TreatmentSymptomsPage(treatment: widget.treatment),
+                    builder: (_) => TreatmentSymptomsPage(
+                      treatment: widget.treatment,
+                    ),
                   ),
                 );
               },
               icon: const Icon(Icons.healing),
               label: const Text('Ver y reportar síntomas'),
             ),
-
-            // Botón a página de procedimientos
+            const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => TreatmentProcedurePage(treatment: widget.treatment),
+                    builder: (_) => TreatmentProcedurePage(
+                      treatment: widget.treatment,
+                    ),
                   ),
                 );
               },

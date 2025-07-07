@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+
 import '../../domain/entities/treatment.dart';
 import '../../domain/entities/procedure.dart';
 import '../../domain/entities/predicted_execution.dart';
@@ -25,6 +26,7 @@ class TreatmentProcedurePage extends StatefulWidget {
 
 class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
   late final TreatmentRepository _repository;
+  late final Future<List<PredictedExecution>> _futureExecutions;
   final _searchController = TextEditingController();
 
   // filtros y orden
@@ -33,10 +35,6 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
   DateTimeRange? _dateRange;
   SortField _sortField = SortField.date;
   SortOrder _sortOrder = SortOrder.asc;
-
-  List<Procedure> _procedures = [];
-  List<PredictedExecution> _predictedExecutions = [];
-  bool _loading = false;
 
   @override
   void initState() {
@@ -48,7 +46,7 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
     _searchController.addListener(() {
       setState(() => _searchTerm = _searchController.text);
     });
-    _loadProcedures();
+    _futureExecutions = _loadAndStartProcedures();
   }
 
   @override
@@ -57,65 +55,40 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
     super.dispose();
   }
 
-  Future<void> _loadProcedures() async {
-    setState(() => _loading = true);
-    try {
-      final procs =
-          await _repository.getProcedures(widget.treatment.externalId);
-
-      // arrancar los pendientes
-      for (var p in procs) {
-        if (p.status.toUpperCase() == 'PENDING') {
-          await _repository.startProcedure(p.id);
-        }
+  /// Trae los procedures, arranca los PENDING y devuelve la lista de ejecuciones previstas.
+  Future<List<PredictedExecution>> _loadAndStartProcedures() async {
+    final procs =
+        await _repository.getProcedures(widget.treatment.externalId);
+    for (var p in procs) {
+      if (p.status.toUpperCase() == 'PENDING') {
+        await _repository.startProcedure(p.id);
       }
-
-      final preds = await _repository
-          .getPredictedExecutions(widget.treatment.externalId);
-
-      setState(() {
-        _procedures = procs;
-        _predictedExecutions = preds;
-      });
-    } catch (e) {
-      debugPrint('Error loading procedures: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al cargar procedimientos')),
-        );
-      }
-    } finally {
-      setState(() => _loading = false);
     }
+    return _repository.getPredictedExecutions(widget.treatment.externalId);
   }
 
-  List<PredictedExecution> get _filteredAndSorted {
-    // 1. Filtrar por texto & estado & rango de fechas
-    final filtered = _predictedExecutions.where((e) {
+  List<PredictedExecution> _applyFiltersAndSort(
+      List<PredictedExecution> list) {
+    final filtered = list.where((e) {
       final nameMatch = _searchTerm == null ||
           _searchTerm!.isEmpty ||
           e.procedureName
               .toLowerCase()
               .contains(_searchTerm!.toLowerCase());
-
-      final statusMatch = _selectedStatus == null ||
-          e.status == _selectedStatus;
-
+      final statusMatch =
+          _selectedStatus == null || e.status == _selectedStatus;
       final dateMatch = _dateRange == null ||
-          (e.scheduledAt.isAfter(_dateRange!.start.subtract(const Duration(days:1))) &&
-           e.scheduledAt.isBefore(_dateRange!.end.add(const Duration(days:1))));
-
+          (e.scheduledAt
+                  .isAfter(_dateRange!.start.subtract(const Duration(days: 1))) &&
+              e.scheduledAt
+                  .isBefore(_dateRange!.end.add(const Duration(days: 1))));
       return nameMatch && statusMatch && dateMatch;
     }).toList();
 
-    // 2. Ordenar
     filtered.sort((a, b) {
-      int cmp;
-      if (_sortField == SortField.name) {
-        cmp = a.procedureName.compareTo(b.procedureName);
-      } else {
-        cmp = a.scheduledAt.compareTo(b.scheduledAt);
-      }
+      final cmp = (_sortField == SortField.name)
+          ? a.procedureName.compareTo(b.procedureName)
+          : a.scheduledAt.compareTo(b.scheduledAt);
       return _sortOrder == SortOrder.asc ? cmp : -cmp;
     });
 
@@ -142,7 +115,7 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
       appBar: AppBar(title: const Text('Procedimientos')),
       body: Column(
         children: [
-          // ————— Controles de búsqueda y filtros —————
+          // — Buscador —
           Padding(
             padding: const EdgeInsets.all(8),
             child: TextField(
@@ -153,11 +126,12 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
               ),
             ),
           ),
+
+          // — Filtros de estado y rango —
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                // Estado
                 Expanded(
                   child: DropdownButton<String>(
                     isExpanded: true,
@@ -169,12 +143,12 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
                               child: Text(s),
                             ))
                         .toList(),
-                    onChanged: (v) =>
-                        setState(() => _selectedStatus = v),
+                    onChanged: (v) => setState(() {
+                      _selectedStatus = v;
+                    }),
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Rango de fecha
                 ElevatedButton.icon(
                   onPressed: _pickDateRange,
                   icon: const Icon(Icons.date_range),
@@ -185,7 +159,8 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
               ],
             ),
           ),
-          // Ordenación
+
+          // — Ordenación —
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
@@ -197,13 +172,13 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
                   items: SortField.values
                       .map((f) => DropdownMenuItem(
                             value: f,
-                            child: Text(f == SortField.name
-                                ? 'Nombre'
-                                : 'Fecha'),
+                            child:
+                                Text(f == SortField.name ? 'Nombre' : 'Fecha'),
                           ))
                       .toList(),
-                  onChanged: (v) =>
-                      setState(() => _sortField = v!),
+                  onChanged: (v) => setState(() {
+                    if (v != null) _sortField = v;
+                  }),
                 ),
                 IconButton(
                   icon: Icon(_sortOrder == SortOrder.asc
@@ -218,32 +193,46 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
               ],
             ),
           ),
+
           const Divider(height: 1),
-          // ————— Lista de resultados —————
+
+          // — FutureBuilder: carga + UI de lista —
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredAndSorted.isEmpty
-                    ? const Center(
-                        child:
-                            Text('No hay registros que mostrar'),
-                      )
-                    : ListView.builder(
-                        itemCount: _filteredAndSorted.length,
-                        itemBuilder: (_, i) {
-                          final e = _filteredAndSorted[i];
-                          return ListTile(
-                            title: Text(e.procedureName,
-                                style: theme.titleMedium),
-                            subtitle: Text(
-                              'Agendado: ${df.format(e.scheduledAt)}',
-                              style: theme.bodySmall,
-                            ),
-                            trailing: Text(e.status,
-                                style: theme.labelMedium),
-                          );
-                        },
-                      ),
+            child: FutureBuilder<List<PredictedExecution>>(
+              future: _futureExecutions,
+              builder: (context, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snap.hasError) {
+                  return Center(
+                      child: Text('Error al cargar: ${snap.error}'));
+                }
+                // datos cargados
+                final allExecs = snap.data!;
+                final list = _applyFiltersAndSort(allExecs);
+
+                if (list.isEmpty) {
+                  return const Center(
+                      child: Text('No hay registros que mostrar'));
+                }
+
+                return ListView.builder(
+                  itemCount: list.length,
+                  itemBuilder: (_, i) {
+                    final e = list[i];
+                    return ListTile(
+                      title: Text(e.procedureName,
+                          style: theme.titleMedium),
+                      subtitle: Text('Agendado: ${df.format(e.scheduledAt)}',
+                          style: theme.bodySmall),
+                      trailing: Text(e.status,
+                          style: theme.labelMedium),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

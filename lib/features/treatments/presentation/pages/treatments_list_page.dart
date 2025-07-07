@@ -1,3 +1,5 @@
+// lib/features/treatments/presentation/pages/treatments_list_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/entities/treatment.dart';
@@ -9,7 +11,8 @@ import '../../../doctor_patient_links/data/repositories/doctor_patient_link_repo
 import '../../../doctor_patient_links/domain/entities/doctor_patient_link.dart';
 import 'treatment_detail_page.dart';
 
-/// Página que muestra la lista de tratamientos del paciente autenticado.
+/// Página que muestra la lista de tratamientos del paciente autenticado,
+/// junto con el nombre cacheado del doctor.
 class TreatmentsListPage extends StatefulWidget {
   const TreatmentsListPage({Key? key}) : super(key: key);
 
@@ -20,78 +23,83 @@ class TreatmentsListPage extends StatefulWidget {
 class _TreatmentsListPageState extends State<TreatmentsListPage> {
   late final TreatmentRepository _treatmentRepo;
   late final DoctorPatientLinkRepositoryImpl _linkRepo;
-  late final Future<List<Treatment>> _futureTreatments;
+  Future<List<dynamic>>? _initFuture;
+
+  /// Mapa: doctorUuid → doctorFullName
+  Map<String, String> _doctorNames = {};
 
   @override
   void initState() {
     super.initState();
+    final storage = const FlutterSecureStorage();
     _treatmentRepo = TreatmentRepositoryImpl(
       remote: TreatmentRemoteDataSourceImpl(),
-      secureStorage: const FlutterSecureStorage(),
+      secureStorage: storage,
     );
     _linkRepo = DoctorPatientLinkRepositoryImpl(
       remote: DoctorPatientLinkRemoteDataSourceImpl(),
-      secureStorage: const FlutterSecureStorage(),
+      secureStorage: storage,
     );
-    _futureTreatments = _treatmentRepo.getTreatments();
-  }
 
+    // Carga tratamientos y vínculos doctor-paciente en paralelo
+    _initFuture = Future.wait([
+      _treatmentRepo.getTreatments(),
+      _linkRepo.getActiveLinks(),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Treatments')),
-      body: FutureBuilder<List<Treatment>>(
-        future: _futureTreatments,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      appBar: AppBar(title: const Text('Mis Tratamientos')),
+      body: FutureBuilder<List<dynamic>>(
+        future: _initFuture,
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: \${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          }
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
+
+          final treatments = snap.data![0] as List<Treatment>;
+          final links = snap.data![1] as List<DoctorPatientLink>;
+
+          // Creamos el mapa doctorUuid → doctorFullName
+          _doctorNames = {
+            for (var l in links) l.doctorUuid: l.doctorFullName
+          };
+
+          if (treatments.isEmpty) {
             return const Center(child: Text('No treatments found.'));
           }
 
-          final treatments = snapshot.data!;
           return ListView.separated(
             separatorBuilder: (_, __) => const Divider(),
             itemCount: treatments.length,
             itemBuilder: (context, index) {
               final t = treatments[index];
+              final doctorName =
+                  _doctorNames[t.doctorProfileUuid] ?? 'Desconocido';
 
-              return FutureBuilder<List<DoctorPatientLink>>(
-                future: _linkRepo.getActiveLinks(),
-                builder: (context, linkSnap) {
-                  String doctorName = 'Desconocido';
-                  if (linkSnap.hasData) {
-                    try {
-                      final link = linkSnap.data!.firstWhere(
-                        (l) => l.doctorUuid == t.doctorProfileUuid,
-                      );
-                      doctorName = link.doctorFullName;
-                    } catch (_) {}
-                  }
-                  return ListTile(
-                    title: Text(t.title.value),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Dr: $doctorName'),
-                        Text('Status: ${t.status}'),
-                        Text(
-                          'Period: ${t.period.startDate.toLocal()} - '
-                          '${t.period.endDate.toLocal()}',
-                        ),
-                      ],
+              return ListTile(
+                title: Text(t.title.value),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Dr: $doctorName'),
+                    Text('Estado: ${t.status}'),
+                  ],
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TreatmentDetailPage(
+                        treatment: t,
+                        doctorName: doctorName,
+                      ),
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TreatmentDetailPage(treatment: t),
-                        ),
-                      );
-                    },
                   );
                 },
               );

@@ -145,7 +145,8 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
     }
     final data = json.decode(resp.body) as List<dynamic>;
     return data
-        .map((e) => PredictedExecution.fromJson(e as Map<String, dynamic>))
+        .map((e) => PredictedExecution.fromJson(
+            e as Map<String, dynamic>, treatmentExternalId))
         .toList();
   }
 
