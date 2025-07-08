@@ -54,9 +54,18 @@ class TreatmentRepositoryImpl implements TreatmentRepository {
   }
 
   @override
-  Future<void> startProcedure(int procedureId) async {
-    await _remote.startProcedure(procedureId);
+  Future<void> startProcedure(int procedureId, DateTime startDateTime) async {
+    final patientUuid = await _secureStorage.read(key: 'patient_uuid');
+    if (patientUuid == null || patientUuid.isEmpty) {
+      throw Exception('Patient UUID not found in storage');
+    }
+    return _remote.startProcedure(
+      procedureId,
+      patientUuid,
+      startDateTime,
+    );
   }
+
 
   @override
   Future<List<PredictedExecution>> getPredictedExecutions(

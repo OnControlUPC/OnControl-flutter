@@ -19,7 +19,7 @@ abstract class TreatmentRepository {
   Future<List<Procedure>> getProcedures(String treatmentExternalId);
 
   /// Inicia un procedimiento pendiente.
-  Future<void> startProcedure(int procedureId);
+  Future<void> startProcedure(int procedureId, DateTime startDateTime);
 
   /// Devuelve las ejecuciones previstas de los procedimientos.
   Future<List<PredictedExecution>> getPredictedExecutions(

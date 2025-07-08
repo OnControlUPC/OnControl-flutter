@@ -11,6 +11,8 @@ import '../../../treatments/domain/entities/treatment.dart';
 import '../../../treatments/domain/entities/predicted_execution.dart';
 import '../../../treatments/presentation/pages/treatment_detail_page.dart';
 import '../../../treatments/presentation/pages/treatment_procedures_page.dart';
+import '../../../treatments/presentation/pages/treatment_procedures_execution_page.dart';
+
 
 import '../../../appointment/data/datasources/appointment_remote_datasource.dart';
 import '../../../appointment/data/repositories/appointment_repository_impl.dart';

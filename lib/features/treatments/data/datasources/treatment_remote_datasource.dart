@@ -26,7 +26,8 @@ abstract class TreatmentRemoteDataSource {
   Future<List<Procedure>> fetchProcedures(String treatmentExternalId);
 
   /// Inicia un procedimiento pendiente.
-  Future<void> startProcedure(int procedureId);
+  Future<void> startProcedure(
+      int procedureId, String patientProfileUuid, DateTime startDateTime);
 
   /// Devuelve las ejecuciones previstas de los procedimientos.
   Future<List<PredictedExecution>> fetchPredictedExecutions(
@@ -98,6 +99,7 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
     return data.map((e) => SymptomLog.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+
   @override
   Future<List<Procedure>> fetchProcedures(String treatmentExternalId) async {
     final uri = Uri.parse(
@@ -106,7 +108,7 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
     final resp = await _client.get(uri,
         headers: {'Content-Type': 'application/json'});
     debugPrint('⬅️ status: ${resp.statusCode}');
-    debugPrint('⬅️ body:   ${resp.body}');
+    debugPrint('⬅️ body:  ${resp.body}');
     if (resp.statusCode != 200) {
       throw Exception('fetchProcedures failed: ${resp.statusCode}');
     }
@@ -117,12 +119,18 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
   }
 
   @override
-  Future<void> startProcedure(int procedureId) async {
+  Future<void> startProcedure(int procedureId, String patientProfileUuid,
+      DateTime startDateTime) async {
     final uri = Uri.parse(
         '${Config.BASE_URL}/api/v1/treatments/procedures/$procedureId/start');
+    final payload = json.encode({
+      'patientProfileUuid': patientProfileUuid,
+      'startDateTime': startDateTime.toUtc().toIso8601String(),
+    });
     debugPrint('🔵 [TreatmentDS] PATCH startProcedure → $uri');
+    debugPrint('▶️ payload: $payload');
     final resp = await _client.patch(uri,
-        headers: {'Content-Type': 'application/json'});
+        headers: {'Content-Type': 'application/json'}, body: payload);
     debugPrint('⬅️ status: ${resp.statusCode}');
     if (resp.statusCode != 200 && resp.statusCode != 204) {
       throw Exception('startProcedure failed: ${resp.statusCode}');
