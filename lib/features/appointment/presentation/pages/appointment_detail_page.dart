@@ -1,10 +1,10 @@
-// lib/features/appointments/presentation/pages/appointment_detail_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/appointment.dart';
 
-/// Detalle de cita sin mostrar el ID, con nombre de doctor pasado desde la lista.
+/// Página completa de detalle de cita con estilo mejorado y acciones
 class AppointmentDetailPage extends StatelessWidget {
   final Appointment appointment;
   final String doctorName;
@@ -17,44 +17,123 @@ class AppointmentDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = appointment;
-    final theme = Theme.of(context).textTheme;
-    final df = DateFormat('dd/MM/yyyy HH:mm');
+    final df = DateFormat('dd MMM yyyy • HH:mm');
+    final theme = Theme.of(context);
+    final isVirtual = appointment.meetingUrl?.isNotEmpty ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Detalle de Cita')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Detalle de Cita'),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            Text('Doctor:', style: theme.titleMedium),
-            Text('Dr. $doctorName', style: theme.bodyMedium),
-            const Divider(),
-
-            Text('Fecha y hora:', style: theme.titleMedium),
-            Text(df.format(t.scheduledAt), style: theme.bodyMedium),
-            const Divider(),
-
-            Text('Estado:', style: theme.titleMedium),
-            Text(t.status, style: theme.bodyMedium),
-            const Divider(),
-
-            Text('Ubicación:', style: theme.titleMedium),
-            Text(
-              t.locationName.isNotEmpty ? t.locationName : 'No especificada',
-              style: theme.bodyMedium,
+        child: Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dr. $doctorName',
+                  style: theme.textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                Divider(color: theme.dividerColor),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      df.format(appointment.scheduledAt.toLocal()),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.info, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      appointment.status.toUpperCase(),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Enlace según tipo de cita
+                if (isVirtual) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.videocam, size: 20, color: Colors.blue),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => launchUrl(Uri.parse(appointment.meetingUrl!)),
+                          child: Text(
+                            'Google Meet: ${appointment.meetingUrl}',
+                            style: const TextStyle(
+                              color: Colors.blue,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on, size: 20, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => launchUrl(Uri.parse(appointment.locationMapsUrl!)),
+                          child: Text(
+                            appointment.locationName.isNotEmpty
+                                ? appointment.locationName
+                                : 'Ubicación sin especificar',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => launchUrl(Uri.parse(appointment.locationMapsUrl!)),
+                    child: const Text(
+                      'Abrir en Google Maps',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                // Botón Cancelar Cita
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      // TODO: manejar cancelación
+                    },
+                    child: const Text('Cancelar cita'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Divider(),
-
-            Text('Mapa (URL):', style: theme.titleMedium),
-            Text(t.locationMapsUrl ?? 'No disponible',
-                style: theme.bodyMedium),
-            const Divider(),
-
-            Text('Reunión (URL):', style: theme.titleMedium),
-            Text(t.meetingUrl ?? 'No disponible', style: theme.bodyMedium),
-            const Divider(),
-          ],
+          ),
         ),
       ),
     );
