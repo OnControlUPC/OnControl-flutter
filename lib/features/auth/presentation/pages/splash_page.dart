@@ -21,14 +21,12 @@ class _SplashPageState extends State<SplashPage> {
     final token = await _storage.read(key: 'token');
     print('▶️ [SplashPage] token=$token');
 
-    // Siempre navegar primero a la pantalla de login
-    Navigator.of(context).pushReplacementNamed('/');
+    // Navegar al login sin posibilidad de volver atrás
+    Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
