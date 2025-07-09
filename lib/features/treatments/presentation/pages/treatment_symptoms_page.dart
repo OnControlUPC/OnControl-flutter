@@ -33,14 +33,41 @@ class _TreatmentSymptomsPageState extends State<TreatmentSymptomsPage> {
       remote: TreatmentRemoteDataSourceImpl(),
       secureStorage: const FlutterSecureStorage(),
     );
-    _loadLogs();
+    loadLogs(); // Cambiar _loadLogs() por loadLogs()
   }
 
-  void _loadLogs() {
-    _futureLogs = _repo.getSymptomLogs(
-      from: widget.treatment.period.startDate.toUtc(),
-      to: widget.treatment.period.endDate.toUtc(),
-    );
+  /// Carga los logs de síntomas
+  Future<void> loadLogs() async {
+    try {
+      setState(() {
+        _futureLogs = _repo.getSymptomLogs(
+          from: widget.treatment.period.startDate.toUtc(),
+          to: widget.treatment.period.endDate.toUtc(),
+        );
+      });
+
+      // Esperar a que se complete
+      await _futureLogs;
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Síntomas actualizados'),
+          backgroundColor: Color.fromARGB(255, 44, 194, 49),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _pickDateTime() async {
@@ -92,7 +119,7 @@ class _TreatmentSymptomsPageState extends State<TreatmentSymptomsPage> {
       setState(() {
         _severity = SymptomSeverity.MILD;
         _loggedAt = DateTime.now();
-        _loadLogs();
+        loadLogs(); // Cambiar _loadLogs() por loadLogs()
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -242,20 +269,240 @@ class _TreatmentSymptomsPageState extends State<TreatmentSymptomsPage> {
 
             // CONTENT - Usando SingleChildScrollView para evitar overflow
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    // Lista de síntomas
-                    SizedBox(
-                      height: 300, // Altura fija para el historial
-                      child: Card(
+              child: RefreshIndicator(
+                onRefresh: loadLogs,
+                color: const Color.fromARGB(255, 44, 194, 49),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Lista de síntomas
+                      SizedBox(
+                        height: 300, // Altura fija para el historial
+                        child: Card(
+                          elevation: 3,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(
+                                          255,
+                                          44,
+                                          194,
+                                          49,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.history,
+                                        color: Color.fromARGB(255, 44, 194, 49),
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Historial de Síntomas',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Expanded(
+                                  child: FutureBuilder<List<SymptomLog>>(
+                                    future: _futureLogs,
+                                    builder: (context, snap) {
+                                      if (snap.connectionState ==
+                                          ConnectionState.waiting) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(
+                                            color: Color.fromARGB(
+                                              255,
+                                              44,
+                                              194,
+                                              49,
+                                            ),
+                                          ),
+                                        );
+                                      } else if (snap.hasError) {
+                                        return Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.error_outline,
+                                                size: 48,
+                                                color: Colors.red.shade300,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'Error al cargar síntomas',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+
+                                      final logs = snap.data!;
+                                      if (logs.isEmpty) {
+                                        return Center(
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.sentiment_satisfied_alt,
+                                                size: 48,
+                                                color: Colors.grey.shade300,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'No hay síntomas reportados',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+
+                                      return ListView.builder(
+                                        itemCount: logs.length,
+                                        itemBuilder: (_, i) {
+                                          final log = logs[i];
+                                          final severityColor =
+                                              _getSeverityColor(log.severity);
+                                          final severityIcon = _getSeverityIcon(
+                                            log.severity,
+                                          );
+
+                                          return Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
+                                            child: Card(
+                                              color: severityColor.withOpacity(
+                                                0.05,
+                                              ),
+                                              child: ListTile(
+                                                leading: Icon(
+                                                  severityIcon,
+                                                  color: severityColor,
+                                                ),
+                                                title: Text(
+                                                  log.symptomType,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                subtitle: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 6,
+                                                                vertical: 2,
+                                                              ),
+                                                          decoration: BoxDecoration(
+                                                            color: severityColor
+                                                                .withOpacity(
+                                                                  0.2,
+                                                                ),
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  8,
+                                                                ),
+                                                          ),
+                                                          child: Text(
+                                                            log.severity.name,
+                                                            style: TextStyle(
+                                                              color:
+                                                                  severityColor,
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        Text(
+                                                          _formatDateOnly(
+                                                            log.loggedAt,
+                                                          ),
+                                                          style: TextStyle(
+                                                            color: Colors
+                                                                .grey
+                                                                .shade600,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    if (log
+                                                        .notes
+                                                        .isNotEmpty) ...[
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        log.notes,
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade700,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Formulario para reportar síntoma
+                      Card(
                         elevation: 3,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -266,21 +513,21 @@ class _TreatmentSymptomsPageState extends State<TreatmentSymptomsPage> {
                                     decoration: BoxDecoration(
                                       color: const Color.fromARGB(
                                         255,
-                                        44,
-                                        194,
-                                        49,
+                                        105,
+                                        96,
+                                        197,
                                       ).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Icon(
-                                      Icons.history,
-                                      color: Color.fromARGB(255, 44, 194, 49),
+                                      Icons.add_circle_outline,
+                                      color: Color.fromARGB(255, 105, 96, 197),
                                       size: 20,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   const Text(
-                                    'Historial de Síntomas',
+                                    'Reportar Síntoma',
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -290,359 +537,153 @@ class _TreatmentSymptomsPageState extends State<TreatmentSymptomsPage> {
                                 ],
                               ),
                               const SizedBox(height: 16),
-                              Expanded(
-                                child: FutureBuilder<List<SymptomLog>>(
-                                  future: _futureLogs,
-                                  builder: (context, snap) {
-                                    if (snap.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                        child: CircularProgressIndicator(
-                                          color: Color.fromARGB(
-                                            255,
-                                            44,
-                                            194,
-                                            49,
-                                          ),
-                                        ),
-                                      );
-                                    } else if (snap.hasError) {
-                                      return Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
+
+                              // Campo tipo
+                              TextField(
+                                controller: _typeCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Tipo de síntoma',
+                                  hintText: 'Ej: Dolor de cabeza, náuseas...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.medical_information_outlined,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Dropdown severidad
+                              DropdownButtonFormField<SymptomSeverity>(
+                                value: _severity,
+                                decoration: InputDecoration(
+                                  labelText: 'Severidad',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: Icon(
+                                    _getSeverityIcon(_severity),
+                                    color: _getSeverityColor(_severity),
+                                  ),
+                                ),
+                                onChanged: (v) =>
+                                    setState(() => _severity = v!),
+                                items: SymptomSeverity.values
+                                    .map(
+                                      (e) => DropdownMenuItem(
+                                        value: e,
+                                        child: Row(
                                           children: [
                                             Icon(
-                                              Icons.error_outline,
-                                              size: 48,
-                                              color: Colors.red.shade300,
+                                              _getSeverityIcon(e),
+                                              color: _getSeverityColor(e),
+                                              size: 16,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'Error al cargar síntomas',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(e.name),
                                           ],
                                         ),
-                                      );
-                                    }
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 12),
 
-                                    final logs = snap.data!;
-                                    if (logs.isEmpty) {
-                                      return Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.sentiment_satisfied_alt,
-                                              size: 48,
-                                              color: Colors.grey.shade300,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'No hay síntomas reportados',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade600,
-                                              ),
-                                            ),
-                                          ],
+                              // Campo notas
+                              TextField(
+                                controller: _notesCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Notas adicionales (opcional)',
+                                  hintText: 'Describe más detalles...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  prefixIcon: const Icon(Icons.note_outlined),
+                                ),
+                                maxLines: 2,
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Selector de fecha
+                              InkWell(
+                                onTap: _pickDateTime,
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_outlined),
+                                      const SizedBox(width: 12),
+                                      Text('Fecha: ${_fmt(_loggedAt)}'),
+                                      const Spacer(),
+                                      const Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Botón enviar
+                              Container(
+                                width: double.infinity,
+                                height: 50,
+                                child: ElevatedButton.icon(
+                                  onPressed: _loading ? null : _submit,
+                                  icon: _loading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.send,
+                                          color: Colors.white,
                                         ),
-                                      );
-                                    }
-
-                                    return ListView.builder(
-                                      itemCount: logs.length,
-                                      itemBuilder: (_, i) {
-                                        final log = logs[i];
-                                        final severityColor = _getSeverityColor(
-                                          log.severity,
-                                        );
-                                        final severityIcon = _getSeverityIcon(
-                                          log.severity,
-                                        );
-
-                                        return Container(
-                                          margin: const EdgeInsets.only(
-                                            bottom: 8,
-                                          ),
-                                          child: Card(
-                                            color: severityColor.withOpacity(
-                                              0.05,
-                                            ),
-                                            child: ListTile(
-                                              leading: Icon(
-                                                severityIcon,
-                                                color: severityColor,
-                                              ),
-                                              title: Text(
-                                                log.symptomType,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              subtitle: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    children: [
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 6,
-                                                              vertical: 2,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: severityColor
-                                                              .withOpacity(0.2),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                        ),
-                                                        child: Text(
-                                                          log.severity.name,
-                                                          style: TextStyle(
-                                                            color:
-                                                                severityColor,
-                                                            fontSize: 10,
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        _formatDateOnly(
-                                                          log.loggedAt,
-                                                        ),
-                                                        style: TextStyle(
-                                                          color: Colors
-                                                              .grey
-                                                              .shade600,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  if (log.notes.isNotEmpty) ...[
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      log.notes,
-                                                      style: TextStyle(
-                                                        color: Colors
-                                                            .grey
-                                                            .shade700,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
+                                  label: Text(
+                                    _loading
+                                        ? 'Enviando...'
+                                        : 'Reportar Síntoma',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color.fromARGB(
+                                      255,
+                                      105,
+                                      96,
+                                      197,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 3,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 16),
-
-                    // Formulario para reportar síntoma
-                    Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color.fromARGB(
-                                      255,
-                                      105,
-                                      96,
-                                      197,
-                                    ).withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.add_circle_outline,
-                                    color: Color.fromARGB(255, 105, 96, 197),
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                const Text(
-                                  'Reportar Síntoma',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Campo tipo
-                            TextField(
-                              controller: _typeCtrl,
-                              decoration: InputDecoration(
-                                labelText: 'Tipo de síntoma',
-                                hintText: 'Ej: Dolor de cabeza, náuseas...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                prefixIcon: const Icon(
-                                  Icons.medical_information_outlined,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Dropdown severidad
-                            DropdownButtonFormField<SymptomSeverity>(
-                              value: _severity,
-                              decoration: InputDecoration(
-                                labelText: 'Severidad',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                prefixIcon: Icon(
-                                  _getSeverityIcon(_severity),
-                                  color: _getSeverityColor(_severity),
-                                ),
-                              ),
-                              onChanged: (v) => setState(() => _severity = v!),
-                              items: SymptomSeverity.values
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            _getSeverityIcon(e),
-                                            color: _getSeverityColor(e),
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(e.name),
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Campo notas
-                            TextField(
-                              controller: _notesCtrl,
-                              decoration: InputDecoration(
-                                labelText: 'Notas adicionales (opcional)',
-                                hintText: 'Describe más detalles...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                prefixIcon: const Icon(Icons.note_outlined),
-                              ),
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Selector de fecha
-                            InkWell(
-                              onTap: _pickDateTime,
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_outlined),
-                                    const SizedBox(width: 12),
-                                    Text('Fecha: ${_fmt(_loggedAt)}'),
-                                    const Spacer(),
-                                    const Icon(
-                                      Icons.arrow_forward_ios,
-                                      size: 16,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Botón enviar
-                            Container(
-                              width: double.infinity,
-                              height: 50,
-                              child: ElevatedButton.icon(
-                                onPressed: _loading ? null : _submit,
-                                icon: _loading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.send,
-                                        color: Colors.white,
-                                      ),
-                                label: Text(
-                                  _loading ? 'Enviando...' : 'Reportar Síntoma',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(
-                                    255,
-                                    105,
-                                    96,
-                                    197,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 3,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Espacio adicional para evitar que el teclado tape el botón
-                    const SizedBox(height: 32),
-                  ],
+                      // Espacio adicional para evitar que el teclado tape el botón
+                      const SizedBox(height: 32),
+                    ],
+                  ),
                 ),
               ),
             ),
