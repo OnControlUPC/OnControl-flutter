@@ -65,6 +65,42 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
     return procs;
   }
 
+  /// Refresca la lista de procedimientos
+  Future<void> _refreshProcedures() async {
+    try {
+      // Recargar procedimientos aceptados localmente
+      await _loadAcceptedProcedures();
+
+      // Recargar procedimientos del servidor
+      setState(() {
+        _proceduresFuture = _loadProcedures();
+      });
+
+      // Esperar a que se complete
+      await _proceduresFuture;
+
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Procedimientos actualizados'),
+          backgroundColor: Color.fromARGB(255, 44, 194, 49),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      // Mostrar error si falla la actualización
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   /// Acepta un procedimiento pendiente (solo localmente)
   Future<void> _onAcceptPressed(int procedureId) async {
     // Mostrar confirmación
@@ -330,355 +366,397 @@ class _TreatmentProcedurePageState extends State<TreatmentProcedurePage> {
 
             // CONTENT
             Expanded(
-              child: FutureBuilder<List<Procedure>>(
-                future: _proceduresFuture,
-                builder: (context, snap) {
-                  if (snap.connectionState != ConnectionState.done) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Color.fromARGB(255, 44, 194, 49),
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Cargando procedimientos...',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  if (snap.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Error al cargar procedimientos',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
+              child: RefreshIndicator(
+                onRefresh: _refreshProcedures,
+                color: const Color.fromARGB(255, 44, 194, 49),
+                child: FutureBuilder<List<Procedure>>(
+                  future: _proceduresFuture,
+                  builder: (context, snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(
+                              color: Color.fromARGB(255, 44, 194, 49),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${snap.error}',
-                            style: TextStyle(color: Colors.grey.shade600),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final procs = snap.data!;
-                  if (procs.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.medical_services_outlined,
-                            size: 64,
-                            color: Colors.grey.shade300,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No hay procedimientos',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade700,
+                            SizedBox(height: 16),
+                            Text(
+                              'Cargando procedimientos...',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Aún no hay procedimientos asignados',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                          ],
+                        ),
+                      );
+                    }
 
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ListView.builder(
-                      itemCount: procs.length,
-                      itemBuilder: (context, i) {
-                        final p = procs[i];
-                        final status = _getProcedureStatus(p);
-                        final statusColor = _getStatusColor(status);
-                        final statusIcon = _getStatusIcon(status);
-                        final statusText = _getStatusText(status);
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: Card(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Header del procedimiento
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          statusIcon,
-                                          color: statusColor,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          p.description ?? 'Sin descripción',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF1E293B),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: statusColor.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          statusText,
-                                          style: TextStyle(
-                                            color: statusColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                    if (snap.hasError) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  size: 64,
+                                  color: Colors.red.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Error al cargar procedimientos',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
                                   ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${snap.error}',
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Arrastra hacia abajo para reintentar',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
-                                  const SizedBox(height: 16),
+                    final procs = snap.data!;
+                    if (procs.isEmpty) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.medical_services_outlined,
+                                  size: 64,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No hay procedimientos',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Aún no hay procedimientos asignados',
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Arrastra hacia abajo para actualizar',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
 
-                                  // Información adicional del procedimiento
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade50,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Column(
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ListView.builder(
+                        itemCount: procs.length,
+                        itemBuilder: (context, i) {
+                          final p = procs[i];
+                          final status = _getProcedureStatus(p);
+                          final statusColor = _getStatusColor(status);
+                          final statusIcon = _getStatusIcon(status);
+                          final statusText = _getStatusText(status);
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Card(
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Header del procedimiento
+                                    Row(
                                       children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.repeat,
-                                              size: 16,
-                                              color: Colors.grey.shade600,
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Recurrencia: ${p.recurrenceType}',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade700,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const Spacer(),
-                                            Text(
-                                              'Intervalo: ${p.interval}',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade700,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                          ],
+                                          ),
+                                          child: Icon(
+                                            statusIcon,
+                                            color: statusColor,
+                                            size: 20,
+                                          ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.numbers,
-                                              size: 16,
-                                              color: Colors.grey.shade600,
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            p.description ?? 'Sin descripción',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E293B),
                                             ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Total ocurrencias: ${p.totalOccurrences}',
-                                              style: TextStyle(
-                                                color: Colors.grey.shade700,
-                                                fontSize: 12,
-                                              ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
-                                          ],
+                                          ),
+                                          child: Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              color: statusColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
 
-                                  const SizedBox(height: 12),
+                                    const SizedBox(height: 16),
 
-                                  // Información del estado
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        statusIcon,
-                                        size: 16,
-                                        color: statusColor,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _getStatusDescription(status, p),
-                                          style: TextStyle(
-                                            color: Colors.grey.shade700,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  // Botones de acción según el estado
-                                  const SizedBox(height: 16),
-                                  if (status == ProcedureStatus.pending) ...[
-                                    // Botón Aceptar para procedimientos pendientes
+                                    // Información adicional del procedimiento
                                     Container(
-                                      width: double.infinity,
-                                      height: 45,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _onAcceptPressed(p.id),
-                                        icon: const Icon(
-                                          Icons.check,
-                                          color: Colors.white,
-                                        ),
-                                        label: const Text(
-                                          'Aceptar Procedimiento',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.orange,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          elevation: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ] else if (status ==
-                                      ProcedureStatus.accepted) ...[
-                                    // Botón Iniciar para procedimientos aceptados
-                                    Container(
-                                      width: double.infinity,
-                                      height: 45,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _onStartPressed(p.id),
-                                        icon: const Icon(
-                                          Icons.play_arrow,
-                                          color: Colors.white,
-                                        ),
-                                        label: const Text(
-                                          'Iniciar Procedimiento',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color.fromARGB(
-                                            255,
-                                            44,
-                                            194,
-                                            49,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          elevation: 2,
-                                        ),
-                                      ),
-                                    ),
-                                  ] else ...[
-                                    // Sin botón para procedimientos ya iniciados
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
+                                      padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.green.withOpacity(0.3),
-                                        ),
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
+                                      child: Column(
                                         children: [
-                                          Icon(
-                                            Icons.check_circle,
-                                            color: Colors.green.shade600,
-                                            size: 20,
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.repeat,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Recurrencia: ${p.recurrenceType}',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade700,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              Text(
+                                                'Intervalo: ${p.interval}',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade700,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Procedimiento Iniciado',
-                                            style: TextStyle(
-                                              color: Colors.green.shade700,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.numbers,
+                                                size: 16,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Total ocurrencias: ${p.totalOccurrences}',
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade700,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
+
+                                    const SizedBox(height: 12),
+
+                                    // Información del estado
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          statusIcon,
+                                          size: 16,
+                                          color: statusColor,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _getStatusDescription(status, p),
+                                            style: TextStyle(
+                                              color: Colors.grey.shade700,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    // Botones de acción según el estado
+                                    const SizedBox(height: 16),
+                                    if (status == ProcedureStatus.pending) ...[
+                                      // Botón Aceptar para procedimientos pendientes
+                                      Container(
+                                        width: double.infinity,
+                                        height: 45,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () =>
+                                              _onAcceptPressed(p.id),
+                                          icon: const Icon(
+                                            Icons.check,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text(
+                                            'Aceptar Procedimiento',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.orange,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ] else if (status ==
+                                        ProcedureStatus.accepted) ...[
+                                      // Botón Iniciar para procedimientos aceptados
+                                      Container(
+                                        width: double.infinity,
+                                        height: 45,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () =>
+                                              _onStartPressed(p.id),
+                                          icon: const Icon(
+                                            Icons.play_arrow,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text(
+                                            'Iniciar Procedimiento',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                const Color.fromARGB(
+                                                  255,
+                                                  44,
+                                                  194,
+                                                  49,
+                                                ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      // Sin botón para procedimientos ya iniciados
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.green.withOpacity(
+                                              0.3,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              color: Colors.green.shade600,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Procedimiento Iniciado',
+                                              style: TextStyle(
+                                                color: Colors.green.shade700,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ],
