@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Colors.grey.shade50,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state is AuthAuthenticated) {
@@ -41,7 +41,7 @@ class _LoginPageState extends State<LoginPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
-                backgroundColor: Colors.red.shade600,
+                backgroundColor: const Color(0xFFDC2626), // Rojo más suave
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -63,14 +63,22 @@ class _LoginPageState extends State<LoginPage> {
                     height: 80,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                        colors: [
+                          Color.fromARGB(255, 44, 194, 49),
+                          Color.fromARGB(255, 105, 96, 197),
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF3B82F6).withOpacity(0.3),
+                          color: const Color.fromARGB(
+                            255,
+                            44,
+                            194,
+                            49,
+                          ).withOpacity(0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -88,16 +96,18 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
+                      color: Color(0xFF064E3B), // Verde oscuro
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Inicia sesión para continuar',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: const Color(0xFF6B7280), // Gris neutro
+                    ),
                   ),
                   const SizedBox(height: 48),
-
                   // Form Section
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -106,9 +116,14 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 5),
+                          color: const Color.fromARGB(
+                            255,
+                            44,
+                            194,
+                            49,
+                          ).withOpacity(0.08),
+                          blurRadius: 25,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
@@ -121,40 +136,40 @@ class _LoginPageState extends State<LoginPage> {
                             controller: _emailController,
                             decoration: InputDecoration(
                               labelText: 'Correo electrónico',
-                              labelStyle: TextStyle(
-                                color: Colors.grey.shade600,
+                              labelStyle: const TextStyle(
+                                color: Color(0xFF6B7280),
                               ),
-                              prefixIcon: Icon(
+                              prefixIcon: const Icon(
                                 Icons.email_outlined,
-                                color: Colors.grey.shade500,
+                                color: Color.fromARGB(255, 44, 194, 49),
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFF3B82F6),
+                                  color: Color.fromARGB(255, 44, 194, 49),
                                   width: 2,
                                 ),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.red.shade400,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFDC2626),
                                 ),
                               ),
                               filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
+                              fillColor: const Color(0xFFF9FAFB),
                             ),
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) => v != null && v.contains('@')
@@ -162,25 +177,24 @@ class _LoginPageState extends State<LoginPage> {
                                 : 'Email inválido',
                           ),
                           const SizedBox(height: 20),
-
                           // Password Field
                           TextFormField(
                             controller: _passwordController,
                             decoration: InputDecoration(
                               labelText: 'Contraseña',
-                              labelStyle: TextStyle(
-                                color: Colors.grey.shade600,
+                              labelStyle: const TextStyle(
+                                color: Color(0xFF6B7280),
                               ),
-                              prefixIcon: Icon(
+                              prefixIcon: const Icon(
                                 Icons.lock_outline,
-                                color: Colors.grey.shade500,
+                                color: Color.fromARGB(255, 44, 194, 49),
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _showPassword
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
-                                  color: Colors.grey.shade500,
+                                  color: const Color(0xFF6B7280),
                                 ),
                                 onPressed: () => setState(
                                   () => _showPassword = !_showPassword,
@@ -188,31 +202,31 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFD1D5DB),
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: Color(0xFF3B82F6),
+                                  color: Color.fromARGB(255, 44, 194, 49),
                                   width: 2,
                                 ),
                               ),
                               errorBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.red.shade400,
+                                borderSide: const BorderSide(
+                                  color: Color(0xFFDC2626),
                                 ),
                               ),
                               filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
+                              fillColor: const Color(0xFFF9FAFB),
                             ),
                             obscureText: !_showPassword,
                             validator: (v) => v != null && v.length >= 6
@@ -220,7 +234,6 @@ class _LoginPageState extends State<LoginPage> {
                                 : 'Mínimo 6 caracteres',
                           ),
                           const SizedBox(height: 32),
-
                           // Login Button
                           BlocBuilder<AuthBloc, AuthState>(
                             builder: (context, state) {
@@ -231,8 +244,8 @@ class _LoginPageState extends State<LoginPage> {
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
                                       colors: [
-                                        Color(0xFF3B82F6),
-                                        Color(0xFF1D4ED8),
+                                        Color.fromARGB(255, 44, 194, 49),
+                                        Color.fromARGB(255, 105, 96, 197),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(12),
@@ -249,15 +262,14 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 );
                               }
-
                               return Container(
                                 width: double.infinity,
                                 height: 56,
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
-                                      Color(0xFF3B82F6),
-                                      Color(0xFF1D4ED8),
+                                      Color.fromARGB(255, 44, 194, 49),
+                                      Color.fromARGB(255, 105, 96, 197),
                                     ],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
@@ -265,11 +277,14 @@ class _LoginPageState extends State<LoginPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(
-                                        0xFF3B82F6,
-                                      ).withOpacity(0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 6),
+                                      color: const Color.fromARGB(
+                                        255,
+                                        44,
+                                        194,
+                                        49,
+                                      ).withOpacity(0.4),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 8),
                                     ),
                                   ],
                                 ),
@@ -307,17 +322,15 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
+                      const Text(
                         '¿No tienes cuenta? ',
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: Color(0xFF6B7280), // Gris neutro
                           fontSize: 14,
                         ),
                       ),
@@ -330,7 +343,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           'Crear cuenta',
                           style: TextStyle(
-                            color: Color(0xFF3B82F6),
+                            color: Color.fromARGB(255, 44, 194, 49),
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -338,7 +351,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 40),
                 ],
               ),
