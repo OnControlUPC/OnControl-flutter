@@ -61,39 +61,40 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Future<void> _loadAll() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      // 1. Traer tratamientos, citas y vínculos en paralelo
       final results = await Future.wait([
         _treatmentRepo.getTreatments(),
         _appointmentRepo.getAppointments(),
         _linkRepo.getActiveLinks(),
       ]);
 
+      if (!mounted) return;
       _treatments = results[0] as List<Treatment>;
       _appointments = results[1] as List<Appointment>;
       final links = results[2] as List<DoctorPatientLink>;
 
-      // 2. Cachear doctorUuid → doctorFullName
       _doctorNames = {for (var l in links) l.doctorUuid: l.doctorFullName};
 
-      // 3. Traer procedimientos predichos
       _predictedExecutions.clear();
       for (var t in _treatments) {
         final preds = await _treatmentRepo.getPredictedExecutions(t.externalId);
+        if (!mounted) return;
         _predictedExecutions.addAll(preds);
       }
 
-      // 4. Construir mapa de eventos mixto
       _buildEventMap();
     } catch (e) {
       debugPrint('Error cargando calendario: $e');
+      if (!mounted) return;
       _error = 'No se pudo cargar el calendario';
     } finally {
+      if (!mounted) return;
       setState(() {
         _loading = false;
       });
