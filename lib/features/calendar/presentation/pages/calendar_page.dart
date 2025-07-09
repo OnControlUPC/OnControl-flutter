@@ -75,19 +75,18 @@ class _CalendarPageState extends State<CalendarPage> {
         _appointmentRepo.getAppointments(),
         _linkRepo.getActiveLinks(),
       ]);
-
       if (!mounted) return;
+
       _treatments = results[0] as List<Treatment>;
       _appointments = results[1] as List<Appointment>;
       final links = results[2] as List<DoctorPatientLink>;
-      _doctorNames = {for (var l in links) l.doctorUuid: l.doctorFullName};
+      _doctorNames = { for (var l in links) l.doctorUuid: l.doctorFullName };
 
       _predictedExecutions.clear();
-      for (var t in _treatments) {
-        final preds = await _treatmentRepo.getPredictedExecutions(t.externalId);
-        if (!mounted) return;
-        _predictedExecutions.addAll(preds);
-      }
+      final futures = _treatments
+          .map((t) => _treatmentRepo.getPredictedExecutions(t.externalId));
+      final lists = await Future.wait(futures);
+      _predictedExecutions = lists.expand((l) => l).toList();
 
       _buildEventMap();
     } catch (e) {
@@ -105,38 +104,25 @@ class _CalendarPageState extends State<CalendarPage> {
   void _buildEventMap() {
     _events.clear();
 
+    // Tratamientos: cada día del periodo
     for (var t in _treatments) {
-      var day = DateTime(
-        t.period.startDate.year,
-        t.period.startDate.month,
-        t.period.startDate.day,
-      );
-      final end = DateTime(
-        t.period.endDate.year,
-        t.period.endDate.month,
-        t.period.endDate.day,
-      );
+      var day = DateTime(t.period.startDate.year, t.period.startDate.month, t.period.startDate.day);
+      final end = DateTime(t.period.endDate.year, t.period.endDate.month, t.period.endDate.day);
       while (!day.isAfter(end)) {
         _events.putIfAbsent(day, () => []).add(t);
         day = day.add(const Duration(days: 1));
       }
     }
 
+    // PredictedExecutions: todos, incluso futuros
     for (var p in _predictedExecutions) {
-      final day = DateTime(
-        p.scheduledAt.year,
-        p.scheduledAt.month,
-        p.scheduledAt.day,
-      );
+      final day = DateTime(p.scheduledAt.year, p.scheduledAt.month, p.scheduledAt.day);
       _events.putIfAbsent(day, () => []).add(p);
     }
 
+    // Citas: cada cita en su día
     for (var a in _appointments) {
-      final day = DateTime(
-        a.scheduledAt.year,
-        a.scheduledAt.month,
-        a.scheduledAt.day,
-      );
+      final day = DateTime(a.scheduledAt.year, a.scheduledAt.month, a.scheduledAt.day);
       _events.putIfAbsent(day, () => []).add(a);
     }
   }
@@ -148,17 +134,16 @@ class _CalendarPageState extends State<CalendarPage> {
 
   String _formatDateTime(DateTime d) {
     final local = d.toLocal();
-    final months = [
-      'Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'
-    ];
-    return '${local.day} ${months[local.month-1]} ${local.year} • '
+    final months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return '${local.day} ${months[local.month - 1]} ${local.year} • '
            '${local.hour.toString().padLeft(2,'0')}:${local.minute.toString().padLeft(2,'0')}';
   }
 
+  String cleanStatus(String status) => status.replaceAll('_', ' ');
+
   String _formatTime(DateTime d) {
     final local = d.toLocal();
-    return '${local.hour.toString().padLeft(2,'0')}:'
-           '${local.minute.toString().padLeft(2,'0')}';
+    return '${local.hour.toString().padLeft(2,'0')}:${local.minute.toString().padLeft(2,'0')}';
   }
 
   Color _getEventTypeColor(Object event) {
@@ -169,11 +154,11 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   Widget _buildCategoryDot(Color color) => Container(
-        width: 6,
-        height: 6,
-        margin: const EdgeInsets.symmetric(horizontal: 1),
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      );
+    width: 6,
+    height: 6,
+    margin: const EdgeInsets.symmetric(horizontal: 1),
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +167,7 @@ class _CalendarPageState extends State<CalendarPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // HEADER (diseño original)
+            // HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 32),
@@ -236,13 +221,9 @@ class _CalendarPageState extends State<CalendarPage> {
             ),
 
             if (_loading)
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_error != null)
-              Expanded(
-                child: Center(child: Text(_error!)),
-              )
+              Expanded(child: Center(child: Text(_error!)))
             else
               Expanded(
                 child: SingleChildScrollView(
@@ -266,8 +247,7 @@ class _CalendarPageState extends State<CalendarPage> {
                           firstDay: DateTime.utc(2020, 1, 1),
                           lastDay: DateTime.utc(2100, 12, 31),
                           focusedDay: _focusedDay,
-                          selectedDayPredicate: (day) =>
-                              isSameDay(_selectedDay, day),
+                          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                           eventLoader: _getEventsForDay,
                           onDaySelected: (selected, focused) {
                             setState(() {
@@ -286,31 +266,21 @@ class _CalendarPageState extends State<CalendarPage> {
                             selectedDecoration: const BoxDecoration(
                                 color: Color.fromARGB(255, 44, 194, 49),
                                 shape: BoxShape.circle),
-                            weekendTextStyle:
-                                TextStyle(color: Colors.red.shade400),
-                            defaultTextStyle: const TextStyle(
-                                color: Color(0xFF1E293B)),
+                            weekendTextStyle: TextStyle(color: Colors.red.shade400),
+                            defaultTextStyle: const TextStyle(color: Color(0xFF1E293B)),
                           ),
                           calendarBuilders: CalendarBuilders<Object>(
                             markerBuilder: (context, date, events) {
                               if (events.isEmpty) return const SizedBox();
-                              final hasTreatment =
-                                  events.any((e) => e is Treatment);
-                              final hasProcedure =
-                                  events.any((e) => e is PredictedExecution);
-                              final hasAppointment =
-                                  events.any((e) => e is Appointment);
+                              final hasTreatment = events.any((e) => e is Treatment);
+                              final hasProcedure = events.any((e) => e is PredictedExecution);
+                              final hasAppointment = events.any((e) => e is Appointment);
                               return Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  if (hasTreatment)
-                                    _buildCategoryDot(const Color.fromARGB(
-                                        255, 44, 194, 49)),
-                                  if (hasProcedure)
-                                    _buildCategoryDot(const Color.fromARGB(
-                                        255, 105, 96, 197)),
-                                  if (hasAppointment)
-                                    _buildCategoryDot(Colors.orange),
+                                  if (hasTreatment) _buildCategoryDot(const Color.fromARGB(255, 44, 194, 49)),
+                                  if (hasProcedure) _buildCategoryDot(const Color.fromARGB(255, 105, 96, 197)),
+                                  if (hasAppointment) _buildCategoryDot(Colors.orange),
                                 ],
                               );
                             },
@@ -323,18 +293,15 @@ class _CalendarPageState extends State<CalendarPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Column(
-                            children: _getEventsForDay(_selectedDay!)
-                                .map((event) {
+                            children: _getEventsForDay(_selectedDay!).map((event) {
                               if (event is Treatment) {
-                                final doctor =
-                                    _doctorNames[event.doctorProfileUuid] ??
-                                        'Desconocido';
+                                final doctor = _doctorNames[event.doctorProfileUuid] ?? 'Desconocido';
                                 return _EventCard(
                                   icon: Icons.medical_services,
                                   color: _getEventTypeColor(event),
+                                  backgroundColor: Colors.white,
                                   title: event.title.value,
-                                  subtitle:
-                                      'Período: ${_formatDateTime(event.period.startDate)}  —  ${_formatDateTime(event.period.endDate)}',
+                                  subtitle: 'Período: ${_formatDateTime(event.period.startDate)} — ${_formatDateTime(event.period.endDate)}',
                                   badge: event.status,
                                   onTap: () => Navigator.push(
                                     context,
@@ -349,39 +316,47 @@ class _CalendarPageState extends State<CalendarPage> {
                               }
                               if (event is PredictedExecution) {
                                 final now = DateTime.now();
-                                final canAccess = event.id != null &&
-                                    event.status.toUpperCase() == 'PENDING' &&
-                                    (event.scheduledAt.isBefore(now) ||
-                                     event.scheduledAt.isAtSameMomentAs(now));
+                                final isFuture = event.scheduledAt.toLocal().isAfter(now);
+                                final isError = event.id == null || isFuture;
+                                final isCompleted = event.status == "REGULARIZED" || event.status == "COMPLETED_ON_TIME";
+                                final canAccess = !isError && !isCompleted;
+
+                                final bgColor = isError
+                                    ? Colors.red.shade50
+                                    : isCompleted
+                                        ? Colors.blue.shade50
+                                        : Colors.white;
+                                final iconColor = isError
+                                    ? Colors.red
+                                    : isCompleted
+                                        ? Colors.blue
+                                        : _getEventTypeColor(event);
+
                                 return _EventCard(
                                   icon: Icons.schedule,
-                                  color: _getEventTypeColor(event),
+                                  color: iconColor,
+                                  backgroundColor: bgColor,
                                   title: event.procedureName,
-                                  subtitle:
-                                      'Programado: ${_formatTime(event.scheduledAt)}',
-                                  badge: event.status,
+                                  subtitle: 'Programado: ${_formatTime(event.scheduledAt)}',
+                                  badge: cleanStatus(event.status),
                                   onTap: canAccess
                                       ? () => Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                                  TreatmentProceduresExecutionPage(
-                                                      execution: event),
+                                              builder: (_) => TreatmentProceduresExecutionPage(execution: event),
                                             ),
-                                          )
+                                          ).then((_) => _loadAll())
                                       : null,
                                 );
                               }
                               if (event is Appointment) {
-                                final doctor =
-                                    _doctorNames[event.doctorProfileUuid] ??
-                                        'Desconocido';
+                                final doctor = _doctorNames[event.doctorProfileUuid] ?? 'Desconocido';
                                 return _EventCard(
                                   icon: Icons.event,
                                   color: _getEventTypeColor(event),
+                                  backgroundColor: Colors.white,
                                   title: 'Cita Médica',
-                                  subtitle:
-                                      'Dr. $doctor — ${_formatTime(event.scheduledAt)}',
+                                  subtitle: 'Dr. $doctor — ${_formatTime(event.scheduledAt)}',
                                   badge: event.status,
                                   onTap: () => Navigator.push(
                                     context,
@@ -414,6 +389,7 @@ class _CalendarPageState extends State<CalendarPage> {
 class _EventCard extends StatelessWidget {
   final IconData icon;
   final Color color;
+  final Color backgroundColor;
   final String title;
   final String subtitle;
   final String badge;
@@ -422,6 +398,7 @@ class _EventCard extends StatelessWidget {
   const _EventCard({
     required this.icon,
     required this.color,
+    required this.backgroundColor,
     required this.title,
     required this.subtitle,
     required this.badge,
@@ -433,6 +410,7 @@ class _EventCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Card(
+        color: backgroundColor,
         elevation: 3,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -457,28 +435,28 @@ class _EventCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        title,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 4),
-                      Text(subtitle,
-                          style: TextStyle(
-                              color: Colors.grey.shade700, fontSize: 14)),
+                      Text(
+                        subtitle,
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(badge,
-                      style: TextStyle(
-                          color: color,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
+                  child: Text(
+                    badge,
+                    style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),

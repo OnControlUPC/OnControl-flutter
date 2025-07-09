@@ -14,16 +14,22 @@ class PredictedExecution {
     required this.status,
     required this.treatmentExternalId,
   });
-
   factory PredictedExecution.fromJson(
     Map<String, dynamic> json,
     String treatmentExternalId,
-  ) =>
-      PredictedExecution(
-        id: json['id'] as int?,
-        procedureName: json['procedureName'] as String,
-        scheduledAt: DateTime.parse(json['scheduledAt'] as String).toLocal(),
-        status: json['status'] as String,
-        treatmentExternalId: treatmentExternalId,
-      );
+  ) {
+
+     // Fuerzamos que la cadena se trate como UTC,
+     // luego la convertimos a hora local (UTC–5)
+     final dtUtc = DateTime.parse('${json['scheduledAt']}Z');
+     final dtLocal = dtUtc.toLocal();
+
+    return PredictedExecution(
+      id: json['id'] as int?,
+      procedureName: json['procedureName'] as String,
+      scheduledAt: dtLocal,
+      status: json['status'] as String,
+      treatmentExternalId: treatmentExternalId,
+    );
+  }
 }
