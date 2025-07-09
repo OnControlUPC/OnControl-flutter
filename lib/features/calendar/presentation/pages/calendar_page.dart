@@ -361,7 +361,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => AppointmentDetailPage(
+                                      builder: (_) => AppointmentDetailDialog (
                                         appointment: event,
                                         doctorName: doctor,
                                       ),

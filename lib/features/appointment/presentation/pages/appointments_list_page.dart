@@ -12,7 +12,7 @@ import '../../data/datasources/appointment_remote_datasource.dart';
 import '../../data/repositories/appointment_repository_impl.dart';
 import 'appointment_detail_page.dart';
 
-/// Página de lista de citas con diseño mejorado
+/// Página de lista de citas que abre un diálogo detallado
 class AppointmentsListPage extends StatefulWidget {
   const AppointmentsListPage({Key? key}) : super(key: key);
   @override
@@ -22,7 +22,7 @@ class AppointmentsListPage extends StatefulWidget {
 class _AppointmentsListPageState extends State<AppointmentsListPage> {
   late final AppointmentRepositoryImpl _apptRepo;
   late final DoctorPatientLinkRepositoryImpl _linkRepo;
-  late final Future<List<dynamic>> _initFuture;
+  late Future<List<dynamic>> _initFuture;
   Map<String, String> _doctorNames = {};
 
   @override
@@ -36,10 +36,15 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
       remote: DoctorPatientLinkRemoteDataSourceImpl(),
       secureStorage: storage,
     );
+    _loadData();
+  }
+
+  void _loadData() {
     _initFuture = Future.wait([
       _apptRepo.getAppointments(),
       _linkRepo.getActiveLinks(),
     ]);
+    setState(() {});
   }
 
   @override
@@ -76,42 +81,44 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
             itemCount: appointments.length,
             itemBuilder: (context, i) {
               final appt = appointments[i];
-              final doctor = _doctorNames[appt.doctorProfileUuid] ?? 'Desconocido';
+              final doctor =
+                  _doctorNames[appt.doctorProfileUuid] ?? 'Desconocido';
               final dateStr = df.format(appt.scheduledAt.toLocal());
-              final status = appt.status.toUpperCase();
 
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 3,
+                  elevation: 2,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => AppointmentDetailPage(
-                            appointment: appt,
-                            doctorName: doctor,
-                          ),
-                        ),
+                    onTap: () async {
+                      await showAppointmentDetailDialog(
+                        context,
+                        appt,
+                        doctor,
                       );
+                      // tras cerrar, recargar
+                      _loadData();
                     },
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                            backgroundColor:
+                                theme.colorScheme.primary.withOpacity(0.2),
                             child: Text(
                               doctor
                                   .split(' ')
-                                  .map((e) => e[0])
+                                  .map((e) => e.isNotEmpty ? e[0] : '')
                                   .take(2)
                                   .join(),
-                              style: theme.textTheme.titleMedium?.copyWith(
+                              style:
+                                  theme.textTheme.titleMedium?.copyWith(
                                 color: theme.colorScheme.primary,
                               ),
                             ),
@@ -119,26 +126,16 @@ class _AppointmentsListPageState extends State<AppointmentsListPage> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  doctor,
-                                  style: theme.textTheme.titleMedium,
-                                ),
+                                Text(doctor,
+                                    style:
+                                        theme.textTheme.titleMedium),
                                 const SizedBox(height: 4),
-                                Text(
-                                  dateStr,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  status,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: status == 'SCHEDULED'
-                                        ? Colors.green
-                                        : Colors.grey,
-                                  ),
-                                ),
+                                Text(dateStr,
+                                    style:
+                                        theme.textTheme.bodyMedium),
                               ],
                             ),
                           ),

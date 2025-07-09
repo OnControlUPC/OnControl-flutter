@@ -14,4 +14,9 @@ class AppointmentRepositoryImpl implements AppointmentRepository {
   Future<List<Appointment>> getAppointments() {
     return remote.fetchAppointments();
   }
+
+  @override
+  Future<void> deleteAppointment(int id) {
+    return remote.deleteAppointment(id);
+  }
 }

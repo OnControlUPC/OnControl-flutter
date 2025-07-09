@@ -1,15 +1,18 @@
+// lib/features/appointments/presentation/pages/appointment_detail_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../data/datasources/appointment_remote_datasource.dart';
+import '../../data/repositories/appointment_repository_impl.dart';
 import '../../domain/entities/appointment.dart';
 
-/// Página completa de detalle de cita con estilo mejorado y acciones
-class AppointmentDetailPage extends StatelessWidget {
+/// Diálogo modal para mostrar el detalle de una cita mejorado
+class AppointmentDetailDialog extends StatelessWidget {
   final Appointment appointment;
   final String doctorName;
 
-  const AppointmentDetailPage({
+  const AppointmentDetailDialog({
     Key? key,
     required this.appointment,
     required this.doctorName,
@@ -18,124 +21,161 @@ class AppointmentDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final df = DateFormat('dd MMM yyyy • HH:mm');
+    final isVirtual = (appointment.meetingUrl ?? '').isNotEmpty;
     final theme = Theme.of(context);
-    final isVirtual = appointment.meetingUrl?.isNotEmpty ?? false;
+    final repo = AppointmentRepositoryImpl(
+      remote: AppointmentRemoteDataSourceImpl(),
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detalle de Cita'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Dr. $doctorName',
-                  style: theme.textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 12),
-                Divider(color: theme.dividerColor),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      df.format(appointment.scheduledAt.toLocal()),
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(Icons.info, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      appointment.status.toUpperCase(),
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Enlace según tipo de cita
-                if (isVirtual) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.videocam, size: 20, color: Colors.blue),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => launchUrl(Uri.parse(appointment.meetingUrl!)),
-                          child: Text(
-                            'Google Meet: ${appointment.meetingUrl}',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Encabezado con avatar y cerrar
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                    child: Text(
+                      doctorName
+                          .split(' ')
+                          .map((e) => e.isNotEmpty ? e[0] : '')
+                          .take(2)
+                          .join(),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.primary,
                       ),
-                    ],
+                    ),
                   ),
-                ] else ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.location_on, size: 20, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => launchUrl(Uri.parse(appointment.locationMapsUrl!)),
-                          child: Text(
-                            appointment.locationName.isNotEmpty
-                                ? appointment.locationName
-                                : 'Ubicación sin especificar',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => launchUrl(Uri.parse(appointment.locationMapsUrl!)),
-                    child: const Text(
-                      'Abrir en Google Maps',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
-                      ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Dr. $doctorName',
+                      style: theme.textTheme.titleLarge,
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
-                const SizedBox(height: 24),
-                // Botón Cancelar Cita
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      // TODO: manejar cancelación
-                    },
-                    child: const Text('Cancelar cita'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
+              ),
+              const SizedBox(height: 24),
+
+              // Fecha y Estado
+              Card(
+                color: theme.colorScheme.surfaceVariant,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          df.format(appointment.scheduledAt.toLocal()),
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                      ),
+                      Chip(
+                        label: Text(
+                          appointment.status.toUpperCase(),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: appointment.status == 'SCHEDULED'
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+
+              // Detalle de ubicación o enlace virtual
+              Text(
+                isVirtual ? 'Reunión virtual' : 'Ubicación presencial',
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  isVirtual ? Icons.videocam : Icons.location_on,
+                  color: isVirtual ? Colors.blue : Colors.red,
+                ),
+                title: Text(
+                  isVirtual
+                      ? appointment.meetingUrl!
+                      : (appointment.locationName.isNotEmpty
+                          ? appointment.locationName
+                          : 'No especificada'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                onTap: () async {
+                  final url = isVirtual
+                      ? appointment.meetingUrl!
+                      : appointment.locationMapsUrl!;
+                  if (await canLaunchUrl(Uri.parse(url))) {
+                    await launchUrl(Uri.parse(url));
+                  }
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Botón Cancelar cita
+              ElevatedButton(
+                onPressed: () async {
+                  await repo.deleteAppointment(appointment.id);
+                  Navigator.of(context).pop(true);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(
+                  'Cancelar cita',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+}
+
+/// Muestra el diálogo y devuelve true si la cita fue cancelada
+Future<bool?> showAppointmentDetailDialog(
+  BuildContext context,
+  Appointment appointment,
+  String doctorName,
+) {
+  return showDialog<bool>(
+    context: context,
+    builder: (_) => AppointmentDetailDialog(
+      appointment: appointment,
+      doctorName: doctorName,
+    ),
+  );
 }
