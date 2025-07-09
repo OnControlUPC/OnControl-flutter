@@ -1,5 +1,3 @@
-// lib/features/treatments/presentation/pages/treatments_list_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../domain/entities/treatment.dart';
@@ -48,64 +46,413 @@ class _TreatmentsListPageState extends State<TreatmentsListPage> {
     ]);
   }
 
+  String _formatDate(DateTime date) {
+    final months = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'activo':
+        return Colors.green;
+      case 'completed':
+      case 'completado':
+        return Colors.blue;
+      case 'pending':
+      case 'pendiente':
+        return Colors.orange;
+      case 'cancelled':
+      case 'cancelado':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'activo':
+        return Icons.play_circle_filled;
+      case 'completed':
+      case 'completado':
+        return Icons.check_circle;
+      case 'pending':
+      case 'pendiente':
+        return Icons.schedule;
+      case 'cancelled':
+      case 'cancelado':
+        return Icons.cancel;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis Tratamientos')),
-      body: FutureBuilder<List<dynamic>>(
-        future: _initFuture,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
-          }
-
-          final treatments = snap.data![0] as List<Treatment>;
-          final links = snap.data![1] as List<DoctorPatientLink>;
-
-          // Creamos el mapa doctorUuid → doctorFullName
-          _doctorNames = {
-            for (var l in links) l.doctorUuid: l.doctorFullName
-          };
-
-          if (treatments.isEmpty) {
-            return const Center(child: Text('No treatments found.'));
-          }
-
-          return ListView.separated(
-            separatorBuilder: (_, __) => const Divider(),
-            itemCount: treatments.length,
-            itemBuilder: (context, index) {
-              final t = treatments[index];
-              final doctorName =
-                  _doctorNames[t.doctorProfileUuid] ?? 'Desconocido';
-
-              return ListTile(
-                title: Text(t.title.value),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Dr: $doctorName'),
-                    Text('Estado: ${t.status}'),
+      backgroundColor: Colors.grey.shade50,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // HEADER (sin botón de retroceso)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 44, 194, 49),
+                    Color.fromARGB(255, 105, 96, 197),
                   ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TreatmentDetailPage(
-                        treatment: t,
-                        doctorName: doctorName,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.medical_services_rounded,
+                      size: 48,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Mis Tratamientos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Gestiona tus tratamientos médicos',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // CONTENT
+            Expanded(
+              child: FutureBuilder<List<dynamic>>(
+                future: _initFuture,
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Color.fromARGB(255, 44, 194, 49),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Cargando tratamientos...',
+                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                          ),
+                        ],
                       ),
+                    );
+                  }
+
+                  if (snap.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error al cargar tratamientos',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${snap.error}',
+                            style: TextStyle(color: Colors.grey.shade600),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final treatments = snap.data![0] as List<Treatment>;
+                  final links = snap.data![1] as List<DoctorPatientLink>;
+
+                  // Creamos el mapa doctorUuid → doctorFullName
+                  _doctorNames = {
+                    for (var l in links) l.doctorUuid: l.doctorFullName,
+                  };
+
+                  if (treatments.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.medical_services_outlined,
+                            size: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No hay tratamientos',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Aún no tienes tratamientos asignados',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView.builder(
+                      itemCount: treatments.length,
+                      itemBuilder: (context, index) {
+                        final t = treatments[index];
+                        final doctorName =
+                            _doctorNames[t.doctorProfileUuid] ?? 'Desconocido';
+                        final statusColor = _getStatusColor(t.status);
+                        final statusIcon = _getStatusIcon(t.status);
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Card(
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => TreatmentDetailPage(
+                                      treatment: t,
+                                      doctorName: doctorName,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Header del tratamiento
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromARGB(
+                                              255,
+                                              44,
+                                              194,
+                                              49,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.medical_services,
+                                            color: Color.fromARGB(
+                                              255,
+                                              44,
+                                              194,
+                                              49,
+                                            ),
+                                            size: 20,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            t.title.value,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                statusIcon,
+                                                size: 14,
+                                                color: statusColor,
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                t.status,
+                                                style: TextStyle(
+                                                  color: statusColor,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 16),
+
+                                    // Información del doctor
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          size: 16,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Dr. $doctorName',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    // Período del tratamiento
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today_outlined,
+                                          size: 16,
+                                          color: Colors.grey.shade600,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${_formatDate(t.period.startDate)} - ${_formatDate(t.period.endDate)}',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    // Botón de acción
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    TreatmentDetailPage(
+                                                      treatment: t,
+                                                      doctorName: doctorName,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.arrow_forward_ios,
+                                            size: 14,
+                                          ),
+                                          label: const Text('Ver detalles'),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor:
+                                                const Color.fromARGB(
+                                                  255,
+                                                  44,
+                                                  194,
+                                                  49,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
