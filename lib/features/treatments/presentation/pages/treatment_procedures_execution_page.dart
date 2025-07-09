@@ -1,180 +1,107 @@
-// lib/features/treatments/presentation/pages/treatment_procedures_page.dart
-/*
+// lib/features/treatments/presentation/pages/treatment_procedures_execution_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
-
-import '../../domain/entities/treatment.dart';
 import '../../domain/entities/predicted_execution.dart';
 import '../../domain/repositories/treatment_repository.dart';
 import '../../data/datasources/treatment_remote_datasource.dart';
 import '../../data/repositories/treatment_repository_impl.dart';
 
-enum SortField { name, date }
-enum SortOrder { asc, desc }
-
-class TreatmentProcedureExecutionPage extends StatefulWidget {
-  final Treatment treatment;
-  const TreatmentProcedureExecutionPage({Key? key, required this.treatment})
+class TreatmentProceduresExecutionPage extends StatefulWidget {
+  final PredictedExecution execution;
+  const TreatmentProceduresExecutionPage({Key? key, required this.execution})
       : super(key: key);
 
   @override
-  _TreatmentProcedureExecutionPageState createState() =>
-      _TreatmentProcedureExecutionPageState();
+  _TreatmentProceduresExecutionPageState createState() =>
+      _TreatmentProceduresExecutionPageState();
 }
 
-class _TreatmentProcedureExecutionPageState extends State<TreatmentProcedureExecutionPage> {
+class _TreatmentProceduresExecutionPageState
+    extends State<TreatmentProceduresExecutionPage> {
+  DateTime? _selectedDateTime;
   late final TreatmentRepository _repository;
-  late final Future<List<PredictedExecution>> _futureExecutions;
-  final _searchController = TextEditingController();
-
-  // filtros y orden
-  String? _searchTerm;
-  String? _selectedStatus;
-  DateTimeRange? _dateRange;
-  SortField _sortField = SortField.date;
-  SortOrder _sortOrder = SortOrder.asc;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _repository = TreatmentRepositoryImpl(
       remote: TreatmentRemoteDataSourceImpl(),
-      secureStorage: const FlutterSecureStorage(),
+      secureStorage: _storage,
     );
-    _searchController.addListener(() {
-      setState(() => _searchTerm = _searchController.text);
-    });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  /// Trae los procedures, arranca los PENDING y devuelve la lista de ejecuciones previstas.
-  Future<List<PredictedExecution>> _loadAndStartProcedures() async {
-    final procs =
-        await _repository.getProcedures(widget.treatment.externalId);
-    for (var p in procs) {
-      if (p.status.toUpperCase() == 'PENDING') {
-        await _repository.startProcedure(p.id, p.startDateTime);
-      }
-    }
-    return _repository.getPredictedExecutions(widget.treatment.externalId);
-  }
-
-  List<PredictedExecution> _applyFiltersAndSort(
-      List<PredictedExecution> list) {
-    final filtered = list.where((e) {
-      final nameMatch = _searchTerm == null ||
-          _searchTerm!.isEmpty ||
-          e.procedureName
-              .toLowerCase()
-              .contains(_searchTerm!.toLowerCase());
-      final statusMatch =
-          _selectedStatus == null || e.status == _selectedStatus;
-      final dateMatch = _dateRange == null ||
-          (e.scheduledAt
-                  .isAfter(_dateRange!.start.subtract(const Duration(days: 1))) &&
-              e.scheduledAt
-                  .isBefore(_dateRange!.end.add(const Duration(days: 1))));
-      return nameMatch && statusMatch && dateMatch;
-    }).toList();
-
-    filtered.sort((a, b) {
-      final cmp = (_sortField == SortField.name)
-          ? a.procedureName.compareTo(b.procedureName)
-          : a.scheduledAt.compareTo(b.scheduledAt);
-      return _sortOrder == SortOrder.asc ? cmp : -cmp;
-    });
-
-    return filtered;
-  }
-
-  Future<void> _pickDateRange() async {
-    final picked = await showDateRangePicker(
+  Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+    final twoDaysAgo = now.subtract(const Duration(days: 2));
+    final date = await showDatePicker(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: twoDaysAgo,
+      lastDate: now,
+      initialDate: now,
     );
-    if (picked != null) {
-      setState(() => _dateRange = picked);
+    if (date == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now),
+    );
+    if (time == null) return;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    setState(() => _selectedDateTime = dt.toUtc());
+  }
+
+  Future<void> _onCompletePressed() async {
+    if (_selectedDateTime == null) return;
+    try {
+      await _repository.completeExecution(
+        widget.execution.id!,
+        _selectedDateTime!,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Procedimiento completado')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).textTheme;
     final df = DateFormat('dd/MM/yyyy HH:mm');
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Procedimientos')),
-      body: Column(
-        children: [
-
-          // — Filtros de estado y rango —
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _pickDateRange,
-                  icon: const Icon(Icons.date_range),
-                  label: Text(_dateRange == null
-                      ? 'Rango fecha'
-                      : '${DateFormat('dd/MM/yyyy').format(_dateRange!.start)} → ${DateFormat('dd/MM/yyyy').format(_dateRange!.end)}'),
-                ),
-              ],
+      appBar: AppBar(title: const Text('Completar Procedimiento')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.execution.procedureName,
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text('Agendado: ${df.format(widget.execution.scheduledAt.toLocal())}',
+                style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.calendar_today),
+              label: Text(_selectedDateTime == null
+                  ? 'Seleccionar fecha y hora'
+                  : 'Seleccionado: ${df.format(_selectedDateTime!.toLocal())}'),
+              onPressed: _pickDateTime,
             ),
-          ),
-
-
-
-          const Divider(height: 1),
-
-          // — FutureBuilder: carga + UI de lista —
-          Expanded(
-            child: FutureBuilder<List<PredictedExecution>>(
-              future: _futureExecutions,
-              builder: (context, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snap.hasError) {
-                  return Center(
-                      child: Text('Error al cargar: ${snap.error}'));
-                }
-                // datos cargados
-                final allExecs = snap.data!;
-                final list = _applyFiltersAndSort(allExecs);
-
-                if (list.isEmpty) {
-                  return const Center(
-                      child: Text('No hay registros que mostrar'));
-                }
-
-                return ListView.builder(
-                  itemCount: list.length,
-                  itemBuilder: (_, i) {
-                    final e = list[i];
-                    return ListTile(
-                      title: Text(e.procedureName,
-                          style: theme.titleMedium),
-                      subtitle: Text('Agendado: ${df.format(e.scheduledAt)}',
-                          style: theme.bodySmall),
-                      trailing: Text(e.status,
-                          style: theme.labelMedium),
-                    );
-                  },
-                );
-              },
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed:
+                  _selectedDateTime == null ? null : _onCompletePressed,
+              child: const Text('Marcar como completado'),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-*/

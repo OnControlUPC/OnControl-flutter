@@ -22,6 +22,8 @@ abstract class TreatmentRepository {
   Future<void> startProcedure(int procedureId, DateTime startDateTime);
 
   /// Devuelve las ejecuciones previstas de los procedimientos.
-  Future<List<PredictedExecution>> getPredictedExecutions(
-      String treatmentExternalId);
+  Future<List<PredictedExecution>> getPredictedExecutions(String treatmentExternalId);
+
+    Future<void> completeExecution(int executionId, DateTime completionDateTime);
+
 }
