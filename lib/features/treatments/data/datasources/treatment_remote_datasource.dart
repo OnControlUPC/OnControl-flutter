@@ -32,6 +32,10 @@ abstract class TreatmentRemoteDataSource {
   /// Devuelve las ejecuciones previstas de los procedimientos.
   Future<List<PredictedExecution>> fetchPredictedExecutions(
       String treatmentExternalId);
+
+
+  Future<void> completeExecution(int executionId, String patientProfileUuid, DateTime completionDate);
+
 }
 
 class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
@@ -135,18 +139,20 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
     if (resp.statusCode != 200 && resp.statusCode != 204) {
       throw Exception('startProcedure failed: ${resp.statusCode}');
     }
-  }
 
+  }
   @override
   Future<List<PredictedExecution>> fetchPredictedExecutions(
       String treatmentExternalId) async {
     final uri = Uri.parse(
         '${Config.BASE_URL}/api/v1/treatments/$treatmentExternalId/predicted-executions');
     debugPrint('🔵 [TreatmentDS] GET PredictedExecutions → $uri');
-    final resp = await _client.get(uri,
-        headers: {'Content-Type': 'application/json'});
+    final resp = await _client.get(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+    );
     debugPrint('⬅️ status: ${resp.statusCode}');
-    debugPrint('⬅️ body:   ${resp.body}');
+    debugPrint('⬅️ body predicted executions:   ${resp.body}');
     if (resp.statusCode != 200) {
       throw Exception(
           'fetchPredictedExecutions failed: ${resp.statusCode}');
@@ -156,6 +162,29 @@ class TreatmentRemoteDataSourceImpl implements TreatmentRemoteDataSource {
         .map((e) => PredictedExecution.fromJson(
             e as Map<String, dynamic>, treatmentExternalId))
         .toList();
+  }
+
+  @override
+  Future<void> completeExecution(int executionId, String patientProfileUuid, DateTime completionDate) async {
+    final uri = Uri.parse('${Config.BASE_URL}/api/v1/procedure-executions/$executionId/complete');
+    final payload = json.encode({
+      'patientProfileUuid': patientProfileUuid,
+      'completionDate': completionDate.toUtc().toIso8601String(),
+    });
+    debugPrint('🔵 [TreatmentDS] PATCH completeExecution → $uri');
+    debugPrint('▶️ payload: $payload');
+
+    final resp = await _client.patch(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: payload,
+    );
+    debugPrint('⬅️ status: ${resp.statusCode}');
+    debugPrint('⬅️ body of completed execution:   ${resp.body}');
+
+    if (resp.statusCode != 200 && resp.statusCode != 204) {
+      throw Exception('completeExecution failed: ${resp.statusCode}');
+    }
   }
 
 

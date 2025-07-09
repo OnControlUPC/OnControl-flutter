@@ -69,7 +69,14 @@ class TreatmentRepositoryImpl implements TreatmentRepository {
 
   @override
   Future<List<PredictedExecution>> getPredictedExecutions(
-      String treatmentExternalId) async {
+      String treatmentExternalId) {
     return _remote.fetchPredictedExecutions(treatmentExternalId);
+  }
+
+    @override
+  Future<void> completeExecution(int executionId, DateTime completionDateTime) async {
+    final patientUuid = await _secureStorage.read(key: 'patient_uuid');
+    if (patientUuid == null) throw Exception('Patient UUID not found');
+    return _remote.completeExecution(executionId, patientUuid, completionDateTime);
   }
 }
