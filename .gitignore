@@ -1,0 +1,11 @@
+.dart_tool/
+.idea/
+.vscode/
+build/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/ServiceDefinitions.json
+ios/Pods/
+ios/Runner.xcworkspace/
+pubspec.lock
